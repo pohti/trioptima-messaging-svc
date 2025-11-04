@@ -1,7 +1,9 @@
 from datetime import datetime
 from typing import Optional
 from pydantic import BaseModel, Field
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, Text
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.sql import func
 
 Base = declarative_base()
 
@@ -11,7 +13,7 @@ class MessageDB(Base):
     id = Column(Integer, primary_key=True, index=True)
     recipient_email = Column(String(255), nullable=False, index=True)
     content = Column(Text, nullable=False)
-    sender_email = Column(String(255), nullable=True)  # Optional sender identifier
+    sender_email = Column(String(255), nullable=True) # optional
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     seen = Column(Boolean, default=False, nullable=False)
 

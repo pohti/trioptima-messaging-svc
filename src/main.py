@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Query
+from .database import init_database
 from typing import List
 from .models import (
     MessageCreate, 
@@ -10,6 +11,10 @@ app = FastAPI(
     description="A REST API for sending and retrieving messages",
     version="1.0.0"
 )
+@app.on_event("startup")
+async def startup_event():
+    init_database()
+
 
 # Root endpoint
 @app.get("/")

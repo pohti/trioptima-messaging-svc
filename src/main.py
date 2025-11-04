@@ -1,7 +1,11 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 
-app = FastAPI()
+app = FastAPI(
+    title="Messaging Service API",
+    description="A REST API for sending and retrieving messages",
+    version="1.0.0"
+)
 
 # Simple data model
 class Item(BaseModel):
@@ -12,33 +16,15 @@ class Item(BaseModel):
 # Root endpoint
 @app.get("/")
 def read_root():
-    return {"message": "Hello, World!"}
+    return {"message": "Hello world! The service is up and running."}
 
-# Get endpoint with path parameter
-@app.get("/items/{item_id}")
-def read_item(item_id: int, q: str = None):
-    return {"item_id": item_id, "query": q}
+# TODO: 
+# Post message
 
-# Post endpoint
-@app.post("/items/")
-def create_item(item: Item):
-    return {"item_name": item.name, "item_price": item.price}
+# Fetch new messages by user id
 
-# Get endpoint returning a list
-@app.get("/users/")
-def read_users():
-    return [
-        {"id": 1, "name": "Alice"},
-        {"id": 2, "name": "Bob"},
-        {"id": 3, "name": "Charlie"}
-    ]
+# Delete a single message by message id
 
-# Put endpoint
-@app.put("/items/{item_id}")
-def update_item(item_id: int, item: Item):
-    return {"item_id": item_id, "item": item}
+# Delete multiple messages by message ids
 
-# Delete endpoint
-@app.delete("/items/{item_id}")
-def delete_item(item_id: int):
-    return {"message": f"Item {item_id} deleted"}
+# Fetch multiple messages (according to start and stop index, ordered by time)

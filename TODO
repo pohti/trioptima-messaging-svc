@@ -11,5 +11,6 @@
 
 
 --- good to have ---
+- validate whether recipient/sender emails follow the email format
 - rabbitMQ
 - split up messaging service into ingest and read services

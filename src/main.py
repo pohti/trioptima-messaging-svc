@@ -65,8 +65,19 @@ async def delete_message(
 
 # Delete multiple messages by message ids
 @app.delete("/messages", summary="Delete multiple messages")
-async def delete_multiple_messages(message_ids: List[int] = Query(...)):
-    return {"message": f"Messages with ids {message_ids} deleted."}
+async def delete_multiple_messages(
+    message_ids: List[int] = Query(...),
+    db: Session = Depends(get_db)
+):
+    try:
+        result = MessageService.delete_multiple_messages(message_ids, db)
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail=result.message)
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error deleting messages: {str(e)}")
 
 # Fetch multiple messages (according to start and stop index, ordered by time)
 # note: could improve this by allowing filtering by created_at range

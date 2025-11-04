@@ -1,3 +1,4 @@
+from typing import List
 from .models import (
     MessageDB, 
     MessageCreate, 
@@ -47,7 +48,6 @@ class MessageService:
             total_count=total_count
         )
 
-
     @staticmethod
     def delete_message(message_id: int, db: Session) -> DeleteResponse:
         message = db.query(MessageDB).filter(MessageDB.id == message_id).first()
@@ -57,3 +57,14 @@ class MessageService:
         db.delete(message)
         db.commit()
         return DeleteResponse(deleted_count=1, message=f"Message {message_id} deleted successfully")
+
+    @staticmethod
+    def delete_multiple_messages(message_ids: List[int], db: Session) -> DeleteResponse:
+        deleted_count = db.query(MessageDB).filter(MessageDB.id.in_(message_ids)).count()
+        db.query(MessageDB).filter(MessageDB.id.in_(message_ids)).delete(synchronize_session=False)
+        db.commit()
+        
+        return DeleteResponse(
+            deleted_count=deleted_count,
+            message=f"{deleted_count} message(s) deleted successfully"
+        )

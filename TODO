@@ -1,4 +1,6 @@
 - define models
+    - message
+    - user
 - openapi specs
 - integrate with a lightweight db
 - api endpoints

@@ -1,3 +1,4 @@
+from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy import create_engine
 from .models import Base
 
@@ -8,12 +9,19 @@ engine = create_engine(
     connect_args={"check_same_thread": False} if "sqlite" in DATABASE_URL else {}
 )
 
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
 def create_tables():
-    """Create all database tables"""
     Base.metadata.create_all(bind=engine)
 
+def get_db() -> Session:
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
 def init_database():
-    """Initialize the database with tables"""
     try:
         create_tables()
         print("Database initialized successfully")

@@ -1,5 +1,6 @@
-from fastapi import FastAPI, Query
-from .database import init_database
+from fastapi import FastAPI, Depends, Query
+from sqlalchemy.orm import Session
+from .database import get_db, init_database
 from typing import List
 from .models import (
     MessageCreate, 
@@ -24,7 +25,10 @@ def read_root():
 
 # Post message
 @app.post("/messages", response_model=MessageResponse, summary="Submit a message")
-async def submit_message(message: MessageCreate):
+async def submit_message(
+    message: MessageCreate,     
+    db: Session = Depends(get_db)
+):
     return MessageResponse(
         id=1,
         recipient_email=message.recipient_email,

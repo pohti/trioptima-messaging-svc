@@ -17,7 +17,6 @@ class MessageDB(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     seen = Column(Boolean, default=False, nullable=False)
 
-
 # API Related Models
 class MessageCreate(BaseModel):
     recipient_email: str = Field(..., description="Email of the message recipient")

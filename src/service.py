@@ -40,12 +40,31 @@ class MessageService:
             )
             db.commit()
 
-        total_count = db.query(MessageDB).filter(MessageDB.recipient_email == recipient_email).count()
-
         # no need to show 'seen' field in response
         return MessagesFetchResponse(
             messages=[MessageResponse.model_validate(msg) for msg in new_messages],
-            total_count=total_count
+            count=len(new_messages)
+        )
+
+    @staticmethod
+    def fetch_messages_by_index(
+        recipient_email: str,
+        start_index: int,
+        stop_index: int,
+        db: Session
+    ) -> MessagesFetchResponse:
+        # filter for messages by start_index <= id <= stop_index
+        messages = db.query(MessageDB).filter(
+            and_(
+                MessageDB.recipient_email == recipient_email,
+                MessageDB.id >= start_index,
+                MessageDB.id <= stop_index
+            )
+        ).order_by(MessageDB.created_at.asc()).all() # improvement: allow ordering by desc as well
+        
+        return MessagesFetchResponse(
+            messages=[MessageResponse.model_validate(msg) for msg in messages],
+            count=len(messages),
         )
 
     @staticmethod

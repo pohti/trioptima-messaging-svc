@@ -18,7 +18,6 @@ app = FastAPI(
 async def startup_event():
     init_database()
 
-
 # Root endpoint
 @app.get("/")
 def read_root():
@@ -81,18 +80,22 @@ async def delete_multiple_messages(
 
 # Fetch multiple messages (according to start and stop index, ordered by time)
 # note: could improve this by allowing filtering by created_at range
-@app.get("/messages", response_model=List[MessageResponse], summary="Fetch multiple messages")
-async def fetch_multiple_messages(start: int = 0, stop: int = 10):
-    messages = []
-    for i in range(start, stop):
-        messages.append(
-            MessageResponse(
-                id=i,
-                recipient_email="user@example.com",
-                content=f"Message {i}",
-                sender_email=None,
-                created_at="2024-01-01T00:00:00Z",
-                seen=False
+@app.get("/messages", response_model=MessagesFetchResponse, summary="Fetch multiple messages")
+async def fetch_multiple_messages(
+    recipient_email: str,
+    start: int = Query(0, ge=0, description="Start index for pagination (0-based)"),
+    stop: int = Query(9, ge=0, description="Stop index for pagination (inclusive)"),
+    db: Session = Depends(get_db)
+):
+    try:
+        if stop < start:
+            raise HTTPException(
+                status_code=400, 
+                detail="stop must be greater than or equal to start"
             )
-        )
-    return messages
+        
+        return MessageService.fetch_messages_by_index(recipient_email, start, stop, db)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching messages: {str(e)}")

@@ -36,7 +36,7 @@ class MessageResponse(BaseModel):
 
 class MessagesFetchResponse(BaseModel):
     messages: list[MessageResponse]
-    total_count: int # total messages for the recipient
+    count: int # count of messages returned
 
 class DeleteMessagesRequest(BaseModel):
     message_ids: list[int] = Field(..., min_items=1, description="List of message IDs to delete")

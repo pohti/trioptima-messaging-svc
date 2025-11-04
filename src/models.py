@@ -13,4 +13,7 @@ class MessageResponse(BaseModel):
     content: str
     sender_email: Optional[str]
     created_at: datetime
-    is_fetched: bool
+    is_fetched: bool # no need to include this field when responding
+
+    class Config:
+        from_attributes = True

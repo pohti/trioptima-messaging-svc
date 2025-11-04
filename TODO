@@ -1,0 +1,12 @@
+- define models
+- openapi specs
+- integrate with a lightweight db
+- api endpoints
+- unit tests
+- dockerfile and docker compose
+- update documentation (README)
+
+
+--- good to have ---
+- rabbitMQ
+- split up messaging service into ingest and read services

@@ -26,7 +26,7 @@ async def submit_message(message: MessageCreate):
         content=message.content,
         sender_email=message.sender_email,
         created_at="2024-01-01T00:00:00Z",
-        is_fetched=False
+        seen=False
     )
 
 # Fetch new messages by user email
@@ -39,7 +39,7 @@ async def fetch_messages(email: str):
             content="Hello!",
             sender_email="user@example.com",
             created_at="2024-01-01T00:00:00Z",
-            is_fetched=False
+            seen=False
         ),
         MessageResponse(
             id=2,
@@ -47,7 +47,7 @@ async def fetch_messages(email: str):
             content="How are you?",
             sender_email=None,
             created_at="2024-01-02T00:00:00Z",
-            is_fetched=False
+            seen=False
         )
     ]
 
@@ -74,7 +74,7 @@ async def fetch_multiple_messages(start: int = 0, stop: int = 10):
                 content=f"Message {i}",
                 sender_email=None,
                 created_at="2024-01-01T00:00:00Z",
-                is_fetched=False
+                seen=False
             )
         )
     return messages

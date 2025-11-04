@@ -1,7 +1,22 @@
 from datetime import datetime
 from typing import Optional
 from pydantic import BaseModel, Field
+from sqlalchemy.ext.declarative import declarative_base
 
+Base = declarative_base()
+
+class MessageDB(Base):
+    __tablename__ = "messages"
+
+    id = Column(Integer, primary_key=True, index=True)
+    recipient_email = Column(String(255), nullable=False, index=True)
+    content = Column(Text, nullable=False)
+    sender_email = Column(String(255), nullable=True)  # Optional sender identifier
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    seen = Column(Boolean, default=False, nullable=False)
+
+
+# API Related Models
 class MessageCreate(BaseModel):
     recipient_email: str = Field(..., description="Email of the message recipient")
     content: str = Field(..., min_length=1, description="Message content")
@@ -13,7 +28,7 @@ class MessageResponse(BaseModel):
     content: str
     sender_email: Optional[str]
     created_at: datetime
-    is_fetched: bool # no need to include this field when responding
+    seen: bool # no need to include this field when responding
 
     class Config:
         from_attributes = True

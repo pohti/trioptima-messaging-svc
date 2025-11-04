@@ -59,8 +59,19 @@ async def fetch_messages(email: str):
 
 # Delete a single message by message id
 @app.delete("/messages/{message_id}", summary="Delete a message")
-async def delete_message(message_id: int):
-    return {"message": f"Message with id {message_id} deleted."}
+async def delete_message(
+    message_id: int,
+    db: Session = Depends(get_db)
+):
+    try:
+        result = MessageService.delete_message(message_id, db)
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail=result.message)
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error deleting message: {str(e)}")
 
 # Delete multiple messages by message ids
 @app.delete("/messages", summary="Delete multiple messages")

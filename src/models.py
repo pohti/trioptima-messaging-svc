@@ -33,3 +33,7 @@ class MessageResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class DeleteResponse(BaseModel):
+    deleted_count: int
+    message: str

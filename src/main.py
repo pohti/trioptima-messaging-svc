@@ -5,6 +5,7 @@ from typing import List
 from .models import (
     MessageCreate, 
     MessageResponse, 
+    MessagesFetchResponse
 )
 from .service import MessageService
 
@@ -36,26 +37,15 @@ async def submit_message(
         raise HTTPException(status_code=500, detail=f"Error creating message: {str(e)}")
 
 # Fetch new messages by user email
-@app.get("/messages/new", response_model=List[MessageResponse], summary="Fetch new messages")
-async def fetch_messages(email: str):
-    return [
-        MessageResponse(
-            id=1,
-            recipient_email=email,
-            content="Hello!",
-            sender_email="user@example.com",
-            created_at="2024-01-01T00:00:00Z",
-            seen=False
-        ),
-        MessageResponse(
-            id=2,
-            recipient_email=email,
-            content="How are you?",
-            sender_email=None,
-            created_at="2024-01-02T00:00:00Z",
-            seen=False
-        )
-    ]
+@app.get("/messages/new", response_model=MessagesFetchResponse, summary="Fetch new messages")
+async def fetch_new_messages(
+    recipient_email: str,
+    db: Session = Depends(get_db)
+):
+    try:
+        return MessageService.fetch_new_messages(recipient_email, db)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching new messages: {str(e)}")
 
 # Delete a single message by message id
 @app.delete("/messages/{message_id}", summary="Delete a message")

@@ -34,6 +34,10 @@ class MessageResponse(BaseModel):
     class Config:
         from_attributes = True
 
+class MessagesFetchResponse(BaseModel):
+    messages: list[MessageResponse]
+    total_count: int # total messages for the recipient
+
 class DeleteResponse(BaseModel):
     deleted_count: int
     message: str

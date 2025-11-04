@@ -2,6 +2,7 @@
     - message
     - user
 - openapi specs
+    - ensure the descriptions are clear
 - integrate with a lightweight db
 - api endpoints
 - unit tests

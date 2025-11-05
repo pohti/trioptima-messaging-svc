@@ -61,6 +61,14 @@ class MessageService:
             )
         ).order_by(MessageDB.id.asc()).all() # improvement: allow ordering by desc as well
         
+        # update all fetched messages as seen
+        if messages:
+            message_ids = [msg.id for msg in messages]
+            db.query(MessageDB).filter(MessageDB.id.in_(message_ids)).update(
+                {MessageDB.seen: True}, synchronize_session=False
+            )
+            db.commit()
+
         return MessagesFetchResponse(
             messages=[MessageResponse.model_validate(msg) for msg in messages],
             count=len(messages),

@@ -46,6 +46,9 @@ docker-compose up --build
 - **Swagger Docs**: http://localhost:8000/docs
 - **Health Check**: http://localhost:8000/
 
+> Import [`api.postman_collection.json`](postman_collection.json) into Postman to test all API endpoints with pre-configured requests.
+`baseUrl` value needs to be set in collection variables.
+
 ## Development Workflow
 
 ### Running in Development Mode (Recommended)

@@ -19,13 +19,9 @@ install:
 freeze: 
 	$(PIP) freeze > requirements.txt
 
-# runs the fastapi app with uvicorn. Requires .venv
-python: 
-	$(PYTHON) -m uvicorn src.api.main:app --host 0.0.0.0 --port 8000 --reload
-
 # runs unit tests with coverage. Requires .venv
-test:
-	$(PYTHON) -m pytest tests/ -v --cov=src --cov-report=html --cov-report=term-missing
+# test:
+# 	$(PYTHON) -m pytest tests/ -v --cov=src --cov-report=html --cov-report=term-missing
 
 # Clean up everything
 clean:

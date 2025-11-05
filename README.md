@@ -4,11 +4,13 @@ A REST API for sending and retrieving messages built with FastAPI and SQLAlchemy
 
 ## What's in this repo?
 
+- **NGINX**: As reverse proxy round-robin load balancer
 - **FastAPI Application**: REST API framework
 - **SQLAlchemy Models**: Database models
-- **SQLite**: Light-weight DB for persisting messages
-- **Docker Support**: Containerized application with multi-stage builds
-- **Service Layer**: Clean separation of business logic
+- **RabbitMQ**: To decouple how messages are processed
+- **PostgreSQL**: Database for persisting messages
+- **Docker Support**: `docker-compose` to orchestrate multiple containers (nginx, messaging service, rabbitMQ and postgres)
+
 
 ## Project Structure
 
@@ -74,12 +76,6 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
 # Install dependencies
 pip install -r requirements.txt
-
-# Run the application
-chmod +x run.sh
-./run.sh
-# Or manually:
-python -m uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 ### Using Make commands
@@ -87,10 +83,6 @@ python -m uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
 make up # to build and run the service as docker container
 
 make install # to install dependencies in the .venv folder
-
-make python # to run python program locally
-
-make test # to run the unit tests
 
 make clean # to clean up venv, db files and coverage files to start fresh
 ```

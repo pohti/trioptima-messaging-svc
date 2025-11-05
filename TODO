@@ -1,14 +1,15 @@
 - define models
     - message
     - user
+- setup api endpoints with fast api
 - openapi specs
     - ensure the descriptions are clear
-- integrate with a lightweight db
-- api endpoints
+- integrate with a lightweight db (sqlite)
 - unit tests
+    - generate test coverage report
 - dockerfile and docker compose
 - update documentation (README)
-
+- makefile
 
 --- good to have ---
 - validate whether recipient/sender emails follow the email format

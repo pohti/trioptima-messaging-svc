@@ -53,3 +53,41 @@ class TestMessageSvcAPI:
     def test_health_check(self, client):
         response = client.get("/")
         assert response.status_code == 200
+
+    # TODO: test multiple messages
+    def test_submit_message(self, client, sample_message):
+        response = client.post("/messages", json=sample_message)
+        assert response.status_code == 200
+        
+        data = response.json()
+        assert data["recipient_id"] == sample_message["recipient_id"]
+        assert data["content"] == sample_message["content"]
+        assert "id" in data
+        assert data["seen"] == False
+
+    def test_submit_message_validation_error(self, client):
+        """Test validation error when submitting invalid message"""
+        invalid_message = {
+            "recipient_id": "",  # Empty recipient_id should fail
+            "content": ""  # Empty content should fail
+        }
+        response = client.post("/messages", json=invalid_message)
+        assert response.status_code == 422
+
+    # fetch new messages should be empty when no messages exist
+
+    # new message should be included in fetch new messages
+
+    # already fetched message should not be included in fetch new messages
+
+    # should be able to delete specified message
+
+    # should return 404 when deleting non-existent message
+
+    # should be able to delete multiple messages
+
+    # should return 422 when deleting with empty message_ids
+
+    # should be able to fetch messages with start, stop index
+
+    # messages should be returned in ascending order of id

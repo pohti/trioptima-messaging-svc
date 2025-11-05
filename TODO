@@ -1,6 +1,5 @@
 - define models
     - message
-    - user
 - setup api endpoints with fast api
 - openapi specs
     - ensure the descriptions are clear
@@ -13,5 +12,5 @@
 
 --- good to have ---
 - validate whether recipient/sender emails follow the email format
-- rabbitMQ
+- rabbitMQ to handle messaging queue and delete messages queue
 - split up messaging service into ingest and read services

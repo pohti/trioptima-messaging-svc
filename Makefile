@@ -18,6 +18,9 @@ $(VENV):
 
 install: $(VENV)
 
+freeze: $(VENV)
+	$(PIP) freeze > requirements.txt
+
 # Run FastAPI server (depends on venv existing)
 python: $(VENV)
 	$(PYTHON) -m uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload

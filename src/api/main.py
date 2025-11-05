@@ -30,7 +30,7 @@ app = FastAPI(
 # RHealth check endpoint
 @app.get("/", summary="Health check endpoint")
 def health_check():
-    return {"message": "Hello world! The service is up and running."}
+    return {"message": "Hello World! This is V2 of messaging service."}
 
 
 # Submit a message

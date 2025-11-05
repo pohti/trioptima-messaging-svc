@@ -85,8 +85,8 @@ python -m uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
 |--------|----------|-------------|
 | GET | `/` | Health check |
 | POST | `/messages` | Create a new message |
-| GET | `/messages/new` | Fetch new messages for a user |
-| GET | `/messages?start=0&stop=10` | Fetch paginated messages (start and stop are inclusive) |
+| GET | `/messages/{recipient_id}/new` | Fetch new messages for a user |
+| GET | `/messages/{recipient_id}?start=0&stop=10` | Fetch paginated messages (start and stop are inclusive) |
 | DELETE | `/messages/{id}` | Delete a specific message |
 | DELETE | `/messages` | Delete multiple messages |
 

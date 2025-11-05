@@ -45,7 +45,7 @@ async def submit_message(
         raise HTTPException(status_code=500, detail=f"Error creating message: {str(e)}")
 
 # Fetch new messages by user email
-@app.get("/messages/new", response_model=MessagesFetchResponse, summary="Fetch new messages")
+@app.get("/messages/{recipient_id}/new", response_model=MessagesFetchResponse, summary="Fetch new messages")
 async def fetch_new_messages(
     recipient_id: str,
     db: Session = Depends(get_db)
@@ -89,7 +89,7 @@ async def delete_multiple_messages(
 
 # Fetch multiple messages (according to start and stop index, ordered by time)
 # note: could improve this by allowing filtering by created_at range
-@app.get("/messages", response_model=MessagesFetchResponse, summary="Fetch multiple messages")
+@app.get("/messages/{recipient_id}", response_model=MessagesFetchResponse, summary="Fetch multiple messages")
 async def fetch_multiple_messages(
     recipient_id: str,
     start: int = Query(0, ge=0, description="Start index for pagination (0-based)"),

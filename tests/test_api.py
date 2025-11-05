@@ -84,7 +84,11 @@ class TestMessageSvcAPI:
         response = client.post("/messages", json=invalid_message)
         assert response.status_code == 422
 
-    # fetch new messages should be empty when no messages exist
+    def test_new_messages_empty(self, client):
+        """Fetch new messages should be empty when no messages exist"""
+        response = client.get("/messages/new", params={"recipient_id": "john.doe@example.com"})
+        assert response.status_code == 200
+        assert response.json() == {"messages": [], "count": 0}
 
     # new message should be included in fetch new messages
 

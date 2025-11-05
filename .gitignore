@@ -5,3 +5,4 @@ messages.db
 test.db
 
 .coverage
+htmlcov/

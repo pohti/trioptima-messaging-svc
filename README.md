@@ -79,6 +79,18 @@ chmod +x run.sh
 python -m uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
+### Using Make commands
+```bash
+make up # to build and run the service as docker container
+
+make install # to install dependencies in the .venv folder
+
+# please run 'make install' first
+make python # to run python program locally
+
+make test # to run the unit tests
+```
+
 ## API Endpoints
 
 | Method | Endpoint | Description |

@@ -29,7 +29,7 @@ A REST API for sending and retrieving messages built with FastAPI and SQLAlchemy
 - **Docker** (version 20.0+)
 - **Docker Compose** (version 2.0+)
 
-## Quick Start with Docker Compose
+## How to run the service (using docker-compose)
 
 ### 1. Clone and Build
 ```bash

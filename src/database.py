@@ -1,8 +1,10 @@
+import os
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy import create_engine
 from .models import Base
 
-DATABASE_URL = "sqlite:///./messages.db"
+# allow env vars for database URL
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./messages.db")
 
 engine = create_engine(
     DATABASE_URL,

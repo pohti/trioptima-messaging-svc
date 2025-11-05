@@ -7,7 +7,7 @@ from sqlalchemy.pool import StaticPool
 from unittest.mock import patch
 from src.main import app
 from src.database import get_db
-from src.models import Base
+from src.shared.models import Base
 
 
 # Create a temporary database for testing

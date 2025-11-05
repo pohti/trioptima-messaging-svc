@@ -2,7 +2,7 @@ from fastapi import FastAPI, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from .database import get_db, init_database
 from typing import List
-from .models import (
+from .shared.models import (
     MessageCreate, 
     MessageResponse, 
     MessagesFetchResponse

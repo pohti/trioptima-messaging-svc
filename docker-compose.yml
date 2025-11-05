@@ -1,9 +1,28 @@
 services:
+  database:
+    image: postgres:15-alpine
+    container_name: messaging-db
+    environment:
+      POSTGRES_DB: messaging
+      POSTGRES_USER: messaging_user
+      POSTGRES_PASSWORD: messaging_pass
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U messaging_user -d messaging"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   rabbitmq:
     image: rabbitmq:3-management
     ports:
-      - "5672:5672"    # RabbitMQ message broker
-      - "15672:15672"  # RabbitMQ web UI
+      - "5672:5672"    # server
+      - "15672:15672"  # web UI
     environment:
       RABBITMQ_DEFAULT_USER: user
       RABBITMQ_DEFAULT_PASS: password
@@ -19,3 +38,6 @@ services:
     restart: unless-stopped
     depends_on:
       - rabbitmq
+
+volumes:
+  postgres_data:

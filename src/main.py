@@ -8,15 +8,24 @@ from .models import (
     MessagesFetchResponse
 )
 from .service import MessageService
+from contextlib import asynccontextmanager
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup logic
+    init_database()
+
+    yield
+    # Shutdown logic
 
 app = FastAPI(
     title="Messaging Service API",
     description="A REST API for sending and retrieving messages",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan
 )
-@app.on_event("startup")
-async def startup_event():
-    init_database()
+
 
 # Root endpoint
 @app.get("/")

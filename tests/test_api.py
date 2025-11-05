@@ -54,8 +54,9 @@ class TestMessageSvcAPI:
         response = client.get("/")
         assert response.status_code == 200
 
-    # TODO: test multiple messages
+    
     def test_submit_message(self, client, sample_message):
+        """Should be able to submit a valid message"""
         response = client.post("/messages", json=sample_message)
         assert response.status_code == 200
         
@@ -66,10 +67,19 @@ class TestMessageSvcAPI:
         assert data["seen"] == False
 
     def test_submit_message_validation_error(self, client):
-        """Test validation error when submitting invalid message"""
+        """Should return 422 for empty recipient_id"""
         invalid_message = {
-            "recipient_id": "",  # Empty recipient_id should fail
-            "content": ""  # Empty content should fail
+            "recipient_id": "",
+            "content": "test"
+        }
+        response = client.post("/messages", json=invalid_message)
+        assert response.status_code == 422
+
+    def test_submit_message_validation_error(self, client):
+        """Should return 422 for empty content"""
+        invalid_message = {
+            "recipient_id": "test@example.com",
+            "content": ""
         }
         response = client.post("/messages", json=invalid_message)
         assert response.status_code == 422

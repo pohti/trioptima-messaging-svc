@@ -1,8 +1,7 @@
 from datetime import datetime
-from typing import Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, Text
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declarative_base
 from sqlalchemy.sql import func
 
 Base = declarative_base()
@@ -22,21 +21,21 @@ class MessageCreate(BaseModel):
     content: str = Field(..., min_length=1, description="Message content")
 
 class MessageResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     recipient_id: str
     content: str
     created_at: datetime
     seen: bool # no need to include this field when responding
-
-    class Config:
-        from_attributes = True
+    
 
 class MessagesFetchResponse(BaseModel):
     messages: list[MessageResponse]
     count: int # count of messages returned
 
 class DeleteMessagesRequest(BaseModel):
-    message_ids: list[int] = Field(..., min_items=1, description="List of message IDs to delete")
+    message_ids: list[int] = Field(..., min_length=1, description="List of message IDs to delete")
 
 
 class DeleteResponse(BaseModel):

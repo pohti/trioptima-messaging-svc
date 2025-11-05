@@ -95,6 +95,8 @@ make test # to run the unit tests
 make clean # to clean up venv, db files and coverage files to start fresh
 ```
 
+> If you are running the service for the first time, run `make install` first before you run `make python` or `make test`
+
 ## API Endpoints
 
 | Method | Endpoint | Description |

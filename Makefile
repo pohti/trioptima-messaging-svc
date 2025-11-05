@@ -4,29 +4,24 @@ VENV = .venv
 PYTHON = $(VENV)/bin/python3
 PIP = $(VENV)/bin/pip
 
-# Default goal (optional: make running `make` alone create venv)
-.DEFAULT_GOAL := install
-
 up:
 	docker-compose up --build
 
 # Create virtual environment and install dependencies
-$(VENV):
+install:
 	python3 -m venv $(VENV)
 	$(PIP) install --upgrade pip
 	$(PIP) install -r requirements.txt
 
-install: $(VENV)
-
-freeze: $(VENV)
+freeze: 
 	$(PIP) freeze > requirements.txt
 
-# Run FastAPI server (depends on venv existing)
-python: $(VENV)
+# runs the fastapi app with uvicorn. Requires .venv
+python: 
 	$(PYTHON) -m uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
 
-# Run tests (depends on venv existing)
-test: $(VENV)
+# runs unit tests with coverage. Requires .venv
+test:
 	$(PYTHON) -m pytest tests/ -v --cov=src --cov-report=html --cov-report=term-missing
 
 # Clean up everything

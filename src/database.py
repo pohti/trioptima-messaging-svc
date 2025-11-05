@@ -2,6 +2,7 @@ import os
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy import create_engine
 from .models import Base
+from typing import Generator
 
 # allow env vars for database URL
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./messages.db")
@@ -16,7 +17,7 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 def create_tables():
     Base.metadata.create_all(bind=engine)
 
-def get_db() -> Session:
+def get_db() -> Generator[Session, None, None]:
     db = SessionLocal()
     try:
         yield db

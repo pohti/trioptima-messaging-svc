@@ -68,8 +68,9 @@ class TestMessageSvcAPI:
     def test_health_check(self, client):
         response = client.get("/")
         assert response.status_code == 200
-
     
+    ###########################################################
+    # Submit Message
     def test_submit_message(self, client, sample_message1):
         """Should be able to submit a valid message"""
         response = client.post("/messages", json=sample_message1)
@@ -108,6 +109,8 @@ class TestMessageSvcAPI:
         assert response.status_code == 500
         assert "Error creating message: Database connection failed" in response.json()["detail"]
 
+    ###########################################################
+    # Fetch New Messages
     def test_fetch_new_messages_empty(self, client):
         """Fetch new messages should be empty when no messages exist"""
         response = client.get("/messages/new", params={"recipient_id": "user_one@example.com"})
@@ -165,6 +168,8 @@ class TestMessageSvcAPI:
         assert response.status_code == 500
         assert "Error fetching new messages: Query execution failed" in response.json()["detail"]
 
+    ###########################################################
+    # Delete Messages
     def test_delete_message(self, client, sample_message1):
         """Should be able to delete a specified message"""
         # send a message first
@@ -195,6 +200,8 @@ class TestMessageSvcAPI:
         assert response.status_code == 500
         assert "Error deleting message: Delete operation failed" in response.json()["detail"]
 
+    ###########################################################
+    # Delete Messages - Multiple
     def test_delete_multiple_messages(self, client, sample_message1, sample_message2):
         """Should be able to delete multiple specified messages"""
         # send messages first
@@ -232,7 +239,8 @@ class TestMessageSvcAPI:
         assert response.status_code == 500
         assert "Error deleting messages: Bulk delete failed" in response.json()["detail"]
 
-
+    ###########################################################
+    # Fetch Messages - Multiple
     def test_fetch_multiple_messages_with_pagination(self, client, sample_message1, sample_message2):
         """Should be able to fetch messages with start and stop index"""
         user_email = "user@eg.com"

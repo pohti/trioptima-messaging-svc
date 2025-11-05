@@ -1,43 +1,56 @@
 services:
-  database:
-    image: postgres:15-alpine
-    container_name: messaging-db
-    environment:
-      POSTGRES_DB: messaging
-      POSTGRES_USER: messaging_user
-      POSTGRES_PASSWORD: messaging_pass
-      POSTGRES_HOST_AUTH_METHOD: trust
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U messaging_user -d messaging"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
+  # Shared DB
+  # database:
+  #   image: postgres:15-alpine
+  #   container_name: messaging-db
+  #   environment:
+  #     POSTGRES_DB: messaging
+  #     POSTGRES_USER: messaging_user
+  #     POSTGRES_PASSWORD: messaging_pass
+  #     POSTGRES_HOST_AUTH_METHOD: trust
+  #   ports:
+  #     - "5432:5432"
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #     - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U messaging_user -d messaging"]
+  #     interval: 5s
+  #     timeout: 5s
+  #     retries: 5
 
-  rabbitmq:
-    image: rabbitmq:3-management
-    ports:
-      - "5672:5672"    # server
-      - "15672:15672"  # web UI
-    environment:
-      RABBITMQ_DEFAULT_USER: user
-      RABBITMQ_DEFAULT_PASS: password
+  # Message Queue
+  # rabbitmq:
+  #   image: rabbitmq:3-management
+  #   ports:
+  #     - "5672:5672"    # server
+  #     - "15672:15672"  # web UI
+  #   environment:
+  #     RABBITMQ_DEFAULT_USER: user
+  #     RABBITMQ_DEFAULT_PASS: password
 
-  messaging-service:
-    build: .
+  # API Gateway Service (FastAPI routing)
+  api-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: messaging-api
     ports:
       - "8000:8000"
     environment:
       - PYTHONPATH=/app
+      # - DATABASE_URL=postgresql://messaging_user:messaging_pass@database:5432/messaging
+      - DATABASE_URL=sqlite:///./messages.db
+      - RABBITMQ_URL=amqp://user:password@rabbitmq:5672/
     volumes:
-      - ./src:/app/src  # For development hot-reload
+      - ./src/api:/app/src/api
+    # depends_on:
+    #   database:
+    #     condition: service_healthy
+      # rabbitmq:
+      #   condition: service_started
     restart: unless-stopped
-    depends_on:
-      - rabbitmq
+
 
 volumes:
   postgres_data:

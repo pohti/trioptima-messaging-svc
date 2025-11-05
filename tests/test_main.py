@@ -5,8 +5,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 from unittest.mock import patch
-from src.main import app
-from src.database import get_db
+from src.api.main import app
+from src.shared.database import get_db
 from src.shared.models import Base
 
 
@@ -100,7 +100,7 @@ class TestMessageSvcAPI:
         response = client.post("/messages", json=invalid_message)
         assert response.status_code == 422
 
-    @patch('src.main.MessageService.create_message')
+    @patch('src.api.service.MessageService.create_message')
     def test_submit_message_service_exception(self, mock_create_message, client, sample_message1):
         """Should return 500 when MessageService.create_message raises an exception"""
         mock_create_message.side_effect = Exception("Database connection failed")
@@ -159,7 +159,7 @@ class TestMessageSvcAPI:
         assert response.json()["count"] == 1
         assert response.json()["messages"][0]["content"] == sample_message2["content"]
 
-    @patch('src.main.MessageService.fetch_new_messages')
+    @patch('src.api.service.MessageService.fetch_new_messages')
     def test_fetch_new_messages_service_exception(self, mock_fetch_new_messages, client):
         """Should return 500 when MessageService.fetch_new_messages raises an exception"""
         mock_fetch_new_messages.side_effect = Exception("Query execution failed")
@@ -191,7 +191,7 @@ class TestMessageSvcAPI:
         delete_response = client.delete("/messages/9999")
         assert delete_response.status_code == 404
 
-    @patch('src.main.MessageService.delete_message')
+    @patch('src.api.service.MessageService.delete_message')
     def test_delete_message_service_exception(self, mock_delete_message, client):
         """Should return 500 when MessageService.delete_message raises an exception"""
         mock_delete_message.side_effect = Exception("Delete operation failed")
@@ -230,7 +230,7 @@ class TestMessageSvcAPI:
         delete_response = client.delete("/messages", params={"message_ids": [9999, 10000]})
         assert delete_response.status_code == 404
 
-    @patch('src.main.MessageService.delete_multiple_messages')
+    @patch('src.api.service.MessageService.delete_multiple_messages')
     def test_delete_multiple_messages_service_exception(self, mock_delete_multiple, client):
         """Should return 500 when MessageService.delete_multiple_messages raises an exception"""
         mock_delete_multiple.side_effect = Exception("Bulk delete failed")
@@ -322,7 +322,7 @@ class TestMessageSvcAPI:
         response = client.get(f"/messages/{user_email}?start=1&stop=-1")
         assert response.status_code == 422
 
-    @patch('src.main.MessageService.fetch_messages_by_index')
+    @patch('src.api.service.MessageService.fetch_messages_by_index')
     def test_fetch_multiple_messages_service_exception(self, mock_fetch_messages, client):
         """Should return 500 when MessageService.fetch_messages_by_index raises an exception"""
         mock_fetch_messages.side_effect = Exception("Pagination query failed")

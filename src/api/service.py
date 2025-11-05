@@ -1,5 +1,5 @@
 from typing import List
-from .shared.models import (
+from src.shared.models import (
     MessageDB, 
     MessageCreate, 
     MessageResponse,

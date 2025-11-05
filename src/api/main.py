@@ -1,8 +1,8 @@
 from fastapi import FastAPI, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from .database import get_db, init_database
+from src.shared.database import get_db, init_database
 from typing import List
-from .shared.models import (
+from src.shared.models import (
     MessageCreate, 
     MessageResponse, 
     MessagesFetchResponse

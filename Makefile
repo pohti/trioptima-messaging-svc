@@ -18,7 +18,7 @@ freeze:
 
 # runs the fastapi app with uvicorn. Requires .venv
 python: 
-	$(PYTHON) -m uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
+	$(PYTHON) -m uvicorn src.api.main:app --host 0.0.0.0 --port 8000 --reload
 
 # runs unit tests with coverage. Requires .venv
 test:

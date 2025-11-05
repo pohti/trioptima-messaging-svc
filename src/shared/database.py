@@ -1,7 +1,7 @@
 import os
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy import create_engine
-from .shared.models import Base
+from .models import Base
 from typing import Generator
 
 # allow env vars for database URL

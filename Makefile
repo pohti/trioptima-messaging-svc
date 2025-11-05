@@ -5,7 +5,10 @@ PYTHON = $(VENV)/bin/python3
 PIP = $(VENV)/bin/pip
 
 up:
-	docker-compose up --build
+	docker-compose up --build --scale messaging-svc=3
+
+down:
+	docker-compose down
 
 # Create virtual environment and install dependencies
 install:

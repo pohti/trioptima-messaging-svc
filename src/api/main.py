@@ -1,4 +1,6 @@
-from fastapi import FastAPI, Depends, HTTPException, Query
+import os
+import socket
+from fastapi import FastAPI, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 from src.shared.database import get_db, init_database
 from typing import List
@@ -10,14 +12,16 @@ from src.shared.models import (
 from .service import MessageService
 from contextlib import asynccontextmanager
 
+INSTANCE_ID = os.getenv("HOSTNAME", socket.gethostname())
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup logic
     init_database()
-
+    print(f"Starting messaging service instance: {INSTANCE_ID}")
     yield
     # Shutdown logic
+    print(f"Shutting down messaging service instance: {INSTANCE_ID}")
 
 app = FastAPI(
     title="Messaging Service API",
@@ -27,10 +31,15 @@ app = FastAPI(
 )
 
 
-# RHealth check endpoint
+# Health check endpoint
 @app.get("/", summary="Health check endpoint")
-def health_check():
-    return {"message": "Hello World! This is V2 of messaging service."}
+def health_check(request: Request):
+    # return instance id and request headers for debugging
+    return {
+        "message": f"Hello World! This is V2 of messaging service.",
+        "instance_id": INSTANCE_ID,
+        "host": request.headers.get("host"),
+    }
 
 
 # Submit a message

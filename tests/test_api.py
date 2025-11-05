@@ -167,9 +167,28 @@ class TestMessageSvcAPI:
         delete_response = client.delete("/messages/9999")
         assert delete_response.status_code == 404
 
-    # should be able to delete multiple messages
+    def test_delete_multiple_messages(self, client, sample_message1, sample_message2):
+        """Should be able to delete multiple specified messages"""
+        # send messages first
+        post_response1 = client.post("/messages", json=sample_message1)
+        post_response2 = client.post("/messages", json=sample_message2)
+        message_id1 = post_response1.json()["id"]
+        message_id2 = post_response2.json()["id"]
 
-    # should return 422 when deleting with empty message_ids
+        # delete the messages
+        delete_response = client.delete("/messages", params={"message_ids": [message_id1, message_id2]})
+        assert delete_response.status_code == 200
+        assert delete_response.json()["deleted_count"] == 2
+
+        # verify messages are deleted by fetching messages
+        fetch_response = client.get(f"/messages/{sample_message1['recipient_id']}?start=0&stop=10")
+        assert fetch_response.status_code == 200
+        assert fetch_response.json()["count"] == 0
+
+    def test_delete_multiple_messages_empty_ids(self, client):
+        """Should return 422 when deleting with empty message_ids"""
+        delete_response = client.delete("/messages", params={"message_ids": []})
+        assert delete_response.status_code == 422
 
     # should be able to fetch messages with start, stop index
 

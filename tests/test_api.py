@@ -131,7 +131,6 @@ class TestMessageSvcAPI:
         assert response.json()["messages"][1]["content"] == sample_message2["content"]
         assert response.json()["messages"][1]["recipient_id"] == user_one_email
 
-    # already fetched message should not be included in fetch new messages
     def test_fetch_new_messages_excludes_seen_messages(self, client, sample_message1, sample_message2):
         """Fetch new messages should exclude messages that have already been fetched"""
         user_email = "user_one@example.com"
@@ -147,9 +146,26 @@ class TestMessageSvcAPI:
         assert response.json()["count"] == 1
         assert response.json()["messages"][0]["content"] == sample_message2["content"]
 
-    # should be able to delete specified message
+    def test_delete_message(self, client, sample_message1):
+        """Should be able to delete a specified message"""
+        # send a message first
+        post_response = client.post("/messages", json=sample_message1)
+        message_id = post_response.json()["id"]
 
-    # should return 404 when deleting non-existent message
+        # delete the message
+        delete_response = client.delete(f"/messages/{message_id}")
+        assert delete_response.status_code == 200
+        assert delete_response.json()["deleted_count"] == 1
+
+        # verify message is deleted by fetching messages
+        fetch_response = client.get(f"/messages/{sample_message1['recipient_id']}?start=0&stop=10")
+        assert fetch_response.status_code == 200
+        assert fetch_response.json()["count"] == 0
+
+    def test_delete_non_existent_message(self, client):
+        """Should return 404 when trying to delete a non-existent message"""
+        delete_response = client.delete("/messages/9999")
+        assert delete_response.status_code == 404
 
     # should be able to delete multiple messages
 

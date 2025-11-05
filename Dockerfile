@@ -1,0 +1,35 @@
+FROM python:3.14-slim
+
+WORKDIR /app
+
+# ENV vars
+ENV PYTHONPATH=/app
+# Prevents Python from creating .pyc (compiled bytecode) files
+ENV PYTHONDONTWRITEBYTECODE=1
+# Makes Python output appear immediately instead of being held in a buffer
+ENV PYTHONUNBUFFERED=1
+
+# Install system dependencies (if needed)
+RUN apt-get update && apt-get install -y \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements first for better caching
+COPY requirements.txt .
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application code
+COPY src/ ./src/
+
+# Create a non-root user for security
+RUN adduser --disabled-password --gecos '' appuser && \
+    chown -R appuser:appuser /app
+USER appuser
+
+# Expose the port your app runs on
+EXPOSE 8000
+
+# Command to run the application
+CMD ["python", "-m", "uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]

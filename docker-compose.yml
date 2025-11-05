@@ -1,4 +1,13 @@
 services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"    # RabbitMQ message broker
+      - "15672:15672"  # RabbitMQ web UI
+    environment:
+      RABBITMQ_DEFAULT_USER: user
+      RABBITMQ_DEFAULT_PASS: password
+
   messaging-service:
     build: .
     ports:
@@ -8,3 +17,5 @@ services:
     volumes:
       - ./src:/app/src  # For development hot-reload
     restart: unless-stopped
+    depends_on:
+      - rabbitmq

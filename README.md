@@ -48,13 +48,13 @@ docker-compose up --build
 
 ## Development Workflow
 
-### Running in Development Mode
+### Running in Development Mode (Recommended)
 ```bash
 # Start with hot-reload (rebuilds on code changes)
 docker-compose up --build
 
-# Run in background
-docker-compose up -d --build
+# or use make command
+make up
 ```
 
 ## How to run locally (without Docker)

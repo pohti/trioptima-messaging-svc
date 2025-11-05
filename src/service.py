@@ -13,9 +13,8 @@ class MessageService:
     @staticmethod
     def create_message(message_create: MessageCreate, db: Session) -> MessageResponse:
         new_message = MessageDB(
-            recipient_email=message_create.recipient_email,
+            recipient_id=message_create.recipient_id,
             content=message_create.content,
-            sender_email=message_create.sender_email
         )
         db.add(new_message)
         db.commit()
@@ -23,11 +22,11 @@ class MessageService:
         return MessageResponse.model_validate(new_message)
     
     @staticmethod
-    def fetch_new_messages(recipient_email: str, db: Session) -> MessagesFetchResponse:
+    def fetch_new_messages(recipient_id: str, db: Session) -> MessagesFetchResponse:
         # filter new messages
         new_messages = db.query(MessageDB).filter(
             and_(
-                MessageDB.recipient_email == recipient_email,
+                MessageDB.recipient_id == recipient_id,
                 MessageDB.seen == False
             )
         ).order_by(MessageDB.created_at.asc()).all()
@@ -48,7 +47,7 @@ class MessageService:
 
     @staticmethod
     def fetch_messages_by_index(
-        recipient_email: str,
+        recipient_id: str,
         start_index: int,
         stop_index: int,
         db: Session
@@ -56,11 +55,11 @@ class MessageService:
         # filter for messages by start_index <= id <= stop_index
         messages = db.query(MessageDB).filter(
             and_(
-                MessageDB.recipient_email == recipient_email,
+                MessageDB.recipient_id == recipient_id,
                 MessageDB.id >= start_index,
                 MessageDB.id <= stop_index
             )
-        ).order_by(MessageDB.created_at.asc()).all() # improvement: allow ordering by desc as well
+        ).order_by(MessageDB.id.asc()).all() # improvement: allow ordering by desc as well
         
         return MessagesFetchResponse(
             messages=[MessageResponse.model_validate(msg) for msg in messages],

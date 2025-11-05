@@ -11,23 +11,20 @@ class MessageDB(Base):
     __tablename__ = "messages"
 
     id = Column(Integer, primary_key=True, index=True)
-    recipient_email = Column(String(255), nullable=False, index=True)
+    recipient_id = Column(String(255), nullable=False, index=True)
     content = Column(Text, nullable=False)
-    sender_email = Column(String(255), nullable=True) # optional
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     seen = Column(Boolean, default=False, nullable=False)
 
 # API Related Models
 class MessageCreate(BaseModel):
-    recipient_email: str = Field(..., description="Email of the message recipient")
+    recipient_id: str = Field(..., description="Email of the message recipient")
     content: str = Field(..., min_length=1, description="Message content")
-    sender_email: Optional[str] = Field(None, description="Optional sender email")
 
 class MessageResponse(BaseModel):
     id: int
-    recipient_email: str
+    recipient_id: str
     content: str
-    sender_email: Optional[str]
     created_at: datetime
     seen: bool # no need to include this field when responding
 

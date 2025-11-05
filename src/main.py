@@ -38,11 +38,11 @@ async def submit_message(
 # Fetch new messages by user email
 @app.get("/messages/new", response_model=MessagesFetchResponse, summary="Fetch new messages")
 async def fetch_new_messages(
-    recipient_email: str,
+    recipient_id: str,
     db: Session = Depends(get_db)
 ):
     try:
-        return MessageService.fetch_new_messages(recipient_email, db)
+        return MessageService.fetch_new_messages(recipient_id, db)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching new messages: {str(e)}")
 
@@ -82,7 +82,7 @@ async def delete_multiple_messages(
 # note: could improve this by allowing filtering by created_at range
 @app.get("/messages", response_model=MessagesFetchResponse, summary="Fetch multiple messages")
 async def fetch_multiple_messages(
-    recipient_email: str,
+    recipient_id: str,
     start: int = Query(0, ge=0, description="Start index for pagination (0-based)"),
     stop: int = Query(9, ge=0, description="Stop index for pagination (inclusive)"),
     db: Session = Depends(get_db)
@@ -94,7 +94,7 @@ async def fetch_multiple_messages(
                 detail="stop must be greater than or equal to start"
             )
         
-        return MessageService.fetch_messages_by_index(recipient_email, start, stop, db)
+        return MessageService.fetch_messages_by_index(recipient_id, start, stop, db)
     except HTTPException:
         raise
     except Exception as e:

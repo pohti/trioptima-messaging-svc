@@ -92,8 +92,8 @@ async def delete_multiple_messages(
 @app.get("/messages/{recipient_id}", response_model=MessagesFetchResponse, summary="Fetch multiple messages")
 async def fetch_multiple_messages(
     recipient_id: str,
-    start: int = Query(0, ge=0, description="Start index for pagination (0-based)"),
-    stop: int = Query(9, ge=0, description="Stop index for pagination (inclusive)"),
+    start: int = Query(1, ge=1, description="Start index for pagination (0-based)"),
+    stop: int = Query(9, ge=1, description="Stop index for pagination (inclusive)"),
     db: Session = Depends(get_db)
 ):
     try:

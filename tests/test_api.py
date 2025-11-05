@@ -158,7 +158,7 @@ class TestMessageSvcAPI:
         assert delete_response.json()["deleted_count"] == 1
 
         # verify message is deleted by fetching messages
-        fetch_response = client.get(f"/messages/{sample_message1['recipient_id']}?start=0&stop=10")
+        fetch_response = client.get(f"/messages/{sample_message1['recipient_id']}?start=1&stop=10")
         assert fetch_response.status_code == 200
         assert fetch_response.json()["count"] == 0
 
@@ -181,7 +181,7 @@ class TestMessageSvcAPI:
         assert delete_response.json()["deleted_count"] == 2
 
         # verify messages are deleted by fetching messages
-        fetch_response = client.get(f"/messages/{sample_message1['recipient_id']}?start=0&stop=10")
+        fetch_response = client.get(f"/messages/{sample_message1['recipient_id']}?start=1&stop=10")
         assert fetch_response.status_code == 200
         assert fetch_response.json()["count"] == 0
 
@@ -190,6 +190,83 @@ class TestMessageSvcAPI:
         delete_response = client.delete("/messages", params={"message_ids": []})
         assert delete_response.status_code == 422
 
-    # should be able to fetch messages with start, stop index
+    def test_fetch_multiple_messages_with_pagination(self, client, sample_message1, sample_message2):
+        """Should be able to fetch messages with start and stop index"""
+        user_email = "user@eg.com"
 
-    # messages should be returned in ascending order of id
+        # send 5 messages
+        for i in range(5):
+            message = {
+                "recipient_id": user_email,
+                "content": f"Message {i+1}"
+            }
+            client.post("/messages", json=message)
+
+        # there should be 5 messages
+        fetch_response = client.get(f"/messages/{user_email}?start=1&stop=5")
+        assert fetch_response.status_code == 200
+        assert fetch_response.json()["count"] == 5
+        
+    def test_fetch_multiple_messages_pagination_range(self, client):
+        """Should fetch messages in the correct start-stop range (start inclusive, stop inclusive)"""
+        user_email = "user@eg.com"
+        # send 5 messages
+        for i in range(5):
+            message = {
+                "recipient_id": user_email,
+                "content": f"Message {i+1}"
+            }
+            client.post("/messages", json=message)
+
+        # fetch messages from index 1 to 3
+        fetch_response = client.get(f"/messages/{user_email}?start=1&stop=3")
+        assert fetch_response.status_code == 200
+        assert fetch_response.json()["count"] == 3
+        assert fetch_response.json()["messages"][0]["content"] == "Message 1"
+        assert fetch_response.json()["messages"][1]["content"] == "Message 2"
+        assert fetch_response.json()["messages"][2]["content"] == "Message 3"
+
+    def test_fetch_multiple_messages_ordering(self, client):
+        """Fetched messages should be ordered by message id (index) in asc order"""
+        user_email = "user@eg.com"
+        # send 3 messages
+        contents = ["First message", "Second message", "Third message"]
+        for content in contents:
+            message = {
+                "recipient_id": user_email,
+                "content": content
+            }
+            client.post("/messages", json=message)
+        # fetch all messages
+        fetch_response = client.get(f"/messages/{user_email}?start=1&stop=5")
+        assert fetch_response.status_code == 200
+        assert fetch_response.json()["count"] == 3
+        assert fetch_response.json()["messages"][0]["content"] == "First message"
+        assert fetch_response.json()["messages"][1]["content"] == "Second message"
+        assert fetch_response.json()["messages"][2]["content"] == "Third message"
+
+    def test_fetch_multiple_messages_pagination_out_of_range(self, client):
+        """Should return 422 if start or stop are out of range"""
+        user_email = "user@eg.com"
+        fetch_response = client.get(f"/messages/{user_email}?start=0&stop=15")
+        assert fetch_response.status_code == 422
+
+    def test_fetch_multiple_messages_invalid_stop_value(self, client):
+        """Should return 400 when stop is less than start"""
+        user_email = "user@eg.com"
+        
+        response = client.get(f"/messages/{user_email}?start=5&stop=3")
+        assert response.status_code == 400
+        assert "stop must be greater than or equal to start" in response.json()["detail"]
+
+    def test_fetch_multiple_messages_invalid_parameters(self, client):
+        """Should return 422 for invalid query parameters"""
+        user_email = "user@example.com"
+        
+        #  negative start value (violates ge=1 constraint)
+        response = client.get(f"/messages/{user_email}?start=-1&stop=5")
+        assert response.status_code == 422
+        
+        # negative stop value
+        response = client.get(f"/messages/{user_email}?start=1&stop=-1")
+        assert response.status_code == 422

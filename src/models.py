@@ -10,6 +10,7 @@ class MessageDB(Base):
     __tablename__ = "messages"
 
     id = Column(Integer, primary_key=True, index=True)
+    # improve: format of recipient_id string
     recipient_id = Column(String(255), nullable=False, index=True)
     content = Column(Text, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

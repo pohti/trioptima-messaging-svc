@@ -27,9 +27,9 @@ app = FastAPI(
 )
 
 
-# Root endpoint
-@app.get("/")
-def read_root():
+# RHealth check endpoint
+@app.get("/", summary="Health check endpoint")
+def health_check():
     return {"message": "Hello world! The service is up and running."}
 
 

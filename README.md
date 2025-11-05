@@ -73,6 +73,7 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 
 # Run the application
+chmod +x run.sh
 ./run.sh
 # Or manually:
 python -m uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload

@@ -85,7 +85,6 @@ make up # to build and run the service as docker container
 
 make install # to install dependencies in the .venv folder
 
-# please run 'make install' first
 make python # to run python program locally
 
 make test # to run the unit tests

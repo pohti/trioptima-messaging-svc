@@ -1,1 +1,1 @@
-python -m pytest tests/ -v
+python -m pytest tests/ -v --cov=src --cov-report=html --cov-report=term-missing

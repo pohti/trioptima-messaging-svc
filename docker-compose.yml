@@ -1,23 +1,21 @@
 services:
   # Shared DB
-  # database:
-  #   image: postgres:15-alpine
-  #   container_name: messaging-db
-  #   environment:
-  #     POSTGRES_DB: messaging
-  #     POSTGRES_USER: messaging_user
-  #     POSTGRES_PASSWORD: messaging_pass
-  #     POSTGRES_HOST_AUTH_METHOD: trust
-  #   ports:
-  #     - "5432:5432"
-  #   volumes:
-  #     - postgres_data:/var/lib/postgresql/data
-  #     - ./init.sql:/docker-entrypoint-initdb.d/init.sql
-  #   healthcheck:
-  #     test: ["CMD-SHELL", "pg_isready -U messaging_user -d messaging"]
-  #     interval: 5s
-  #     timeout: 5s
-  #     retries: 5
+  database:
+    image: postgres:15-alpine
+    container_name: messaging-db
+    environment:
+      POSTGRES_DB: messaging
+      POSTGRES_USER: db_user
+      POSTGRES_PASSWORD: db_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U db_user -d messaging"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   # Message Queue
   # rabbitmq:
@@ -28,6 +26,11 @@ services:
   #   environment:
   #     RABBITMQ_DEFAULT_USER: user
   #     RABBITMQ_DEFAULT_PASS: password
+    # healthcheck:
+    #   test: rabbitmq-diagnostics -q ping
+    #   interval: 10s
+    #   timeout: 10s
+    #   retries: 5
 
   # API Gateway Service (FastAPI routing)
   api-gateway:
@@ -39,14 +42,13 @@ services:
       - "8000:8000"
     environment:
       - PYTHONPATH=/app
-      # - DATABASE_URL=postgresql://messaging_user:messaging_pass@database:5432/messaging
-      - DATABASE_URL=sqlite:///./messages.db
+      - DATABASE_URL=postgresql://db_user:db_password@database:5432/messaging
       - RABBITMQ_URL=amqp://user:password@rabbitmq:5672/
     volumes:
       - ./src/api:/app/src/api
-    # depends_on:
-    #   database:
-    #     condition: service_healthy
+    depends_on:
+      database:
+        condition: service_healthy
       # rabbitmq:
       #   condition: service_started
     restart: unless-stopped

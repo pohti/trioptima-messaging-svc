@@ -31,5 +31,5 @@ RUN adduser --disabled-password --gecos '' appuser && \
     chown -R appuser:appuser /app
 USER appuser
 
-# Command to run the consumer
-CMD ["python", "-m", "src.consumer.main"]
+# Command to run the writer
+CMD ["python", "-m", "src.writer.main"]

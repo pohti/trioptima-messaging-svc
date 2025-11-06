@@ -53,11 +53,11 @@ services:
     deploy:
       replicas: 2
 
-  # Consumer Service (for processing messages)
-  messaging-consumer:
+  # Writer Service (for creating and deleting messages)
+  messaging-writer:
     build:
       context: .
-      dockerfile: Dockerfile.consumer
+      dockerfile: Dockerfile.writer
     environment:
       - PYTHONPATH=/app
       - DATABASE_URL=postgresql://db_user:db_password@database:5432/messaging

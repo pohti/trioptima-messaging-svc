@@ -47,9 +47,9 @@ class MessageProcessor:
                 MessageProcessor.QUEUE_NAME,
                 MessageProcessor.process_message_from_queue
             )
-            logger.info("Message consumer started")
+            logger.info("Message Queue consumer started")
         except Exception as e:
-            logger.error(f"Failed to start message consumer: {e}")
+            logger.error(f"Failed to start message queue consumer: {e}")
             raise
 
 message_processor = MessageProcessor()

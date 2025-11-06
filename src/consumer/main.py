@@ -1,56 +1,89 @@
+import asyncio
 import logging
-from typing import Dict, Any
-from sqlalchemy.orm import Session
-from src.shared.database import get_db_session
-from src.shared.models import MessageDB, MessageCreateReq
+import signal
+import sys
+import os
+from src.shared.database import init_database, get_db_session
+from src.consumer.main import message_processor
 from src.shared.rabbit_mq import rabbitmq_manager
 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stdout),
+        logging.FileHandler('/app/logs/consumer.log') if os.path.exists('/app/logs') else logging.StreamHandler(sys.stdout)
+    ]
+)
 logger = logging.getLogger(__name__)
 
-class MessageProcessor:
-    QUEUE_NAME = "message_processing_queue"
-    
-    @staticmethod
-    async def process_message_from_queue(message_data: Dict[str, Any]):
-        """Process a message received from RabbitMQ queue"""
+class ConsumerService:
+    def __init__(self):
+        self.running = False
+        self.instance_id = os.getenv("HOSTNAME", "consumer-unknown")
+        
+    async def start(self):
+        """Start the message consumer service"""
+        self.running = True
+        logger.info(f"Starting Consumer Service - Instance: {self.instance_id}")
+        
         try:
-            # Extract message data
-            recipient_id = message_data.get("recipient_id")
-            content = message_data.get("content")
+            # Initialize database
+            init_database()
+            logger.info("Database initialized")
             
-            if not recipient_id or not content:
-                logger.error(f"Invalid message data: {message_data}")
-                return
-            
-            # Create message in database
+            # Test database connection
             with get_db_session() as db:
-                new_message = MessageDB(
-                    recipient_id=recipient_id,
-                    content=content,
-                )
-                db.add(new_message)
-                db.commit()
-                db.refresh(new_message)
-                
-                logger.info(f"Successfully processed message {new_message.id} for recipient {recipient_id}")
+                db.execute("SELECT 1")
+            logger.info("Database connection verified")
+            
+            # Start consuming messages
+            await message_processor.start_consumer()
+            logger.info("Message consumer started successfully")
+            
+            # Keep the consumer running
+            while self.running:
+                await asyncio.sleep(1)
                 
         except Exception as e:
-            logger.error(f"Failed to process message: {e}")
+            logger.error(f"Consumer service error: {e}")
             raise
+        finally:
+            await self.cleanup()
     
-    @staticmethod
-    async def start_consumer():
-        """Start consuming messages from the queue"""
+    async def cleanup(self):
+        """Clean up resources"""
         try:
-            await rabbitmq_manager.connect()
-            await rabbitmq_manager.declare_queue(MessageProcessor.QUEUE_NAME)
-            await rabbitmq_manager.consume_messages(
-                MessageProcessor.QUEUE_NAME,
-                MessageProcessor.process_message_from_queue
-            )
-            logger.info("Message consumer started")
+            await rabbitmq_manager.close()
+            logger.info("RabbitMQ connection closed")
         except Exception as e:
-            logger.error(f"Failed to start message consumer: {e}")
-            raise
+            logger.error(f"Error during cleanup: {e}")
+    
+    def stop(self):
+        """Stop the consumer service"""
+        self.running = False
+        logger.info("Consumer service stop requested")
 
-message_processor = MessageProcessor()
+# Global consumer instance
+consumer_service = ConsumerService()
+
+def signal_handler(signum, frame):
+    """Handle shutdown signals"""
+    logger.info(f"Received signal {signum}")
+    consumer_service.stop()
+
+if __name__ == "__main__":
+    # Set up signal handlers for graceful shutdown
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+    
+    try:
+        asyncio.run(consumer_service.start())
+    except KeyboardInterrupt:
+        logger.info("Consumer service stopped by user")
+    except Exception as e:
+        logger.error(f"Consumer service failed: {e}")
+        sys.exit(1)
+    
+    logger.info("Consumer service shutdown complete")

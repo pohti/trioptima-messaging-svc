@@ -13,11 +13,14 @@ class RabbitMQManager:
     def __init__(self):
         self.connection: Optional[AbstractConnection] = None
         self.channel: Optional[AbstractChannel] = None
-        self.url = os.getenv("RABBITMQ_URL", "amqp://user:password@localhost:5672/")
+        self.url = os.getenv("RABBITMQ_URL")
         
     async def connect(self):
         """Establish connection to RabbitMQ"""
         try:
+            if not self.url:
+                raise ValueError("RABBITMQ_URL environment variable not set")
+
             self.connection = await connect_robust(self.url)
             self.channel = await self.connection.channel()
             await self.channel.set_qos(prefetch_count=1)

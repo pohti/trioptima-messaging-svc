@@ -58,7 +58,7 @@ app = FastAPI(
 def health_check(request: Request):
     # return instance id and request headers for debugging
     return {
-        "message": f"Hello World! This is V2 of messaging service.",
+        "message": f"Hello World! This is the V2 of messaging service.",
         "instance_id": INSTANCE_ID,
         "host": request.headers.get("host"),
     }

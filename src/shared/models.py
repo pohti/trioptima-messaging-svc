@@ -1,6 +1,6 @@
 from datetime import datetime
 from pydantic import BaseModel, Field, ConfigDict
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, Text
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, Text, Index
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.sql import func
 
@@ -15,6 +15,10 @@ class MessageDB(Base):
     content = Column(Text, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     seen = Column(Boolean, default=False, nullable=False)
+
+    __table_args__ = (
+        Index('idx_recipient_seen', 'recipient_id', 'seen'),
+    )
 
 # API Related Models
 class MessageCreateReq(BaseModel):

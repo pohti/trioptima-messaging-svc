@@ -77,3 +77,9 @@ curl --location 'http://localhost:8000/messages' \
 # Fetch messages
 curl "http://localhost:8000/messages?recipient_id=receiver&start=0&stop=9"
 ```
+
+### Integration Tests
+Run `make test` to run the integration tests.
+Please ensure all the containers are up and running before you run this.
+
+> 🚨 This action also wipes the database before and after.

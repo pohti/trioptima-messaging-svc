@@ -1,12 +1,10 @@
 import os
 import socket
-import asyncio
 import logging
 from fastapi import FastAPI, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 from src.shared.database import get_db, init_database
 from src.shared.rabbit_mq import rabbitmq_manager
-from src.consumer import message_processor
 from typing import List
 from src.shared.models import (
     MessageCreateReq, 
@@ -27,20 +25,16 @@ async def lifespan(app: FastAPI):
     # Startup logic
     init_database()
     
-    # Initialize RabbitMQ
+    # Initialize RabbitMQ (for publishing only)
     try:
         await rabbitmq_manager.connect()
         await rabbitmq_manager.declare_queue(MessageService.MESSAGE_QUEUE)
-        
-        # Start message consumer in background
-        # TODO: run this service as a separate container using docker-compose
-        asyncio.create_task(message_processor.start_consumer())
-        logger.info("RabbitMQ initialized and consumer started")
+        logger.info("RabbitMQ initialized for message publishing")
     except Exception as e:
         logger.error(f"Failed to initialize RabbitMQ: {e}")
         # You might want to decide whether to continue without RabbitMQ or fail here
     
-    print(f"Starting messaging service instance: {INSTANCE_ID}")
+    print(f"Starting messaging API service instance: {INSTANCE_ID}")
     yield
     
     # Shutdown logic
@@ -50,7 +44,7 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"Error closing RabbitMQ connection: {e}")
     
-    print(f"Shutting down messaging service instance: {INSTANCE_ID}")
+    print(f"Shutting down messaging API service instance: {INSTANCE_ID}")
 
 app = FastAPI(
     title="Messaging Service API",
@@ -64,9 +58,10 @@ app = FastAPI(
 def health_check(request: Request):
     # return instance id and request headers for debugging
     return {
-        "message": f"Hello World! This is V2 of messaging service.",
+        "message": f"Hello World! This is V2 of messaging API service.",
         "instance_id": INSTANCE_ID,
         "host": request.headers.get("host"),
+        "service_type": "api"
     }
 
 # Submit a message (async with RabbitMQ)
@@ -79,6 +74,17 @@ async def submit_message_async(
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error queuing message: {str(e)}")
+
+# Submit a message (synchronous - kept for backward compatibility)
+@app.post("/messages/sync", response_model=MessageResponse, summary="Submit a message (sync)")
+async def submit_message_sync(
+    message: MessageCreateReq,     
+    db: Session = Depends(get_db)
+):
+    try:
+        return MessageService.create_message(message, db)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error creating message: {str(e)}")
 
 # Fetch new messages by user email
 @app.get("/messages/{recipient_id}/new", response_model=MessagesFetchResponse, summary="Fetch new messages")

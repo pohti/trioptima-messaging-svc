@@ -17,33 +17,32 @@ A REST API for sending and retrieving messages built with FastAPI and SQLAlchemy
 
 ## Project Structure
 
-```
+```bash
+.
 ├── src/
-│   ├── main.py          
-│   ├── models.py        
-│   ├── service.py       
-│   └── database.py      
-├── requirements.txt    # python dependencies
-├── Dockerfile          
-├── docker-compose.yml  
-└── Makefile
+│   ├── api/                    # REST api service  
+│   ├── shared/                 # db, models, etc.
+│   └── writer/                 # write service
+├── docker-compose.yml          # to orchestrate the containers
+├── Dockerfile                  # for api svc
+├── Dockerfile.writer           # for write svc
+├── Makefile
+├── postman_collection.json
+└── requirements.txt            # python dependencies
 ```
 
-## Prerequisites
+
+
+## How to run the service (using docker-compose)
+### Prerequisites
 
 - **Docker** (version 20.0+)
 - **Docker Compose** (version 2.0+)
+```sh
+docker-compose up
 
-## How to run the service (using docker-compose)
-
-### 1. Clone and Build
-```bash
-# Clone the repository
-git clone <repository-url>
-cd trioptima-messaging-svc
-
-# Build and start the service
-docker-compose up --build
+# or us make command
+make up
 ```
 
 ### 2. Access the API
@@ -51,46 +50,8 @@ docker-compose up --build
 - **Swagger Docs**: http://localhost:8000/docs
 - **Health Check**: http://localhost:8000/
 
-> Import [`api.postman_collection.json`](postman_collection.json) into Postman to test all API endpoints with pre-configured requests.
-`baseUrl` value needs to be set in collection variables.
-
-## Development Workflow
-
-### Running in Development Mode (Recommended)
-```bash
-# Start with hot-reload (rebuilds on code changes)
-docker-compose up --build
-
-# or use make command
-make up
-```
-
-## How to run locally (without Docker)
-
-### Prerequisites
-- Python 3.14+
-- pip
-
-### Setup
-```bash
-# Create virtual environment
-python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-
-# Install dependencies
-pip install -r requirements.txt
-```
-
-### Using Make commands
-```bash
-make up # to build and run the service as docker container
-
-make install # to install dependencies in the .venv folder
-
-make clean # to clean up venv, db files and coverage files to start fresh
-```
-
-> If you are running the service for the first time, run `make install` first before you run `make python` or `make test`
+> Import [`postman_collection.json`](postman_collection.json) so that you can get started quickly.
+`baseUrl` value in collection variables needs to be set to `http://localhost:8000`.
 
 ## API Endpoints
 
@@ -99,7 +60,7 @@ make clean # to clean up venv, db files and coverage files to start fresh
 | GET | `/` | Health check |
 | POST | `/messages` | Create a new message |
 | GET | `/messages/{recipient_id}/new` | Fetch new messages for a user |
-| GET | `/messages/{recipient_id}?start=0&stop=10` | Fetch paginated messages (start and stop are inclusive) |
+| GET | `/messages/{recipient_id}?start=1&stop=10` | Fetch paginated messages (start and stop are inclusive) |
 | DELETE | `/messages/{id}` | Delete a specific message |
 | DELETE | `/messages` | Delete multiple messages |
 

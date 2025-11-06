@@ -1,0 +1,35 @@
+FROM python:3.14-slim
+
+WORKDIR /app
+
+# ENV vars
+ENV PYTHONPATH=/app
+# Prevents Python from creating .pyc (compiled bytecode) files
+ENV PYTHONDONTWRITEBYTECODE=1
+# Makes Python output appear immediately instead of being held in a buffer
+ENV PYTHONUNBUFFERED=1
+
+# Install system dependencies (if needed)
+RUN apt-get update && apt-get install -y \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements first for better caching
+COPY requirements.txt .
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application code
+COPY src/ ./src/
+
+# Create logs directory
+RUN mkdir -p /app/logs
+
+# Create a non-root user for security
+RUN adduser --disabled-password --gecos '' appuser && \
+    chown -R appuser:appuser /app
+USER appuser
+
+# Command to run the consumer
+CMD ["python", "-m", "src.consumer_service"]

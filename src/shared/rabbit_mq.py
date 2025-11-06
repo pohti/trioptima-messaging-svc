@@ -88,12 +88,12 @@ class RabbitMQManager:
                     await callback(message_data)
                     
                     if not auto_ack:
-                        message.ack()
+                        await message.ack()  
                         
                 except Exception as e:
                     logger.error(f"Error processing message: {e}")
                     if not auto_ack:
-                        message.nack(requeue=True)
+                        await message.nack(requeue=True)
                     raise
         
         await queue.consume(process_message, no_ack=auto_ack)

@@ -62,7 +62,6 @@ services:
       - RABBITMQ_URL=amqp://user:password@rabbitmq:5672/
     volumes:
       - ./src:/app/src
-      - ./logs:/app/logs  # Mount logs directory
     depends_on:
       database:
         condition: service_healthy
@@ -70,7 +69,7 @@ services:
         condition: service_started
     restart: unless-stopped
     deploy:
-      replicas: 2  # Scale write service independently
+      replicas: 2
 
   # nginx as round-robin load balancer
   nginx:

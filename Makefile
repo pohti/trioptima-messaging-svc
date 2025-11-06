@@ -19,9 +19,19 @@ install:
 freeze: 
 	$(PIP) freeze > requirements.txt
 
-# runs unit tests with coverage. Requires .venv
-# test:
-# 	$(PYTHON) -m pytest tests/ -v --cov=src --cov-report=html --cov-report=term-missing
+# Test environment
+test-setup:
+	docker-compose -f docker-compose.test.yml up -d --build
+	@echo "Waiting for test services to be ready..."
+	@sleep 15
+
+test-cleanup:
+	docker-compose -f docker-compose.test.yml down -v
+
+test-integration: test-setup
+	@echo "Running integration tests..."
+	TEST_BASE_URL=http://localhost:8001 pytest tests/test_main.py -v --tb=short
+	$(MAKE) test-cleanup
 
 # Clean up everything
 clean:

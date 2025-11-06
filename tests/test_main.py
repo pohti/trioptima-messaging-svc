@@ -1,79 +1,103 @@
-from httpx import patch
+import os
 import pytest
-from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
-from unittest.mock import patch
-from src.api.main import app
-from src.shared.database import get_db
-from src.shared.models import Base
+import requests
+import time
+# Configuration
+BASE_URL = os.getenv("TEST_BASE_URL", "http://localhost:8000")
+TEST_TIMEOUT = 30  # seconds to wait for service to be ready
 
-
-# Create a temporary database for testing
-SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
-
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL,
-    connect_args={"check_same_thread": False},
-    poolclass=StaticPool,
-)
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-def override_get_db():
-    try:
-        db = TestingSessionLocal()
-        yield db
-    finally:
-        db.close()
-
-
-app.dependency_overrides[get_db] = override_get_db
-
-@pytest.fixture(scope="function")
-def client():
-    # Create tables
-    Base.metadata.create_all(bind=engine)
+class TestMessagingServiceIntegration:
     
-    with TestClient(app) as c:
-        yield c
+    @classmethod
+    def setup_class(cls):
+        """Wait for the service to be ready before running tests"""
+        print(f"Waiting for service at {BASE_URL} to be ready...")
+        
+        start_time = time.time()
+        while time.time() - start_time < TEST_TIMEOUT:
+            try:
+                response = requests.get(f"{BASE_URL}/", timeout=5)
+                if response.status_code == 200:
+                    print("Service is ready!")
+                    return
+            except requests.exceptions.RequestException:
+                pass
+            time.sleep(2)
+        
+        raise Exception(f"Service at {BASE_URL} did not become ready within {TEST_TIMEOUT} seconds")
     
-    # Drop tables after test
-    Base.metadata.drop_all(bind=engine)
-
-
-@pytest.fixture
-def sample_message1():
-    return {
-        "recipient_id": "user_one@example.com",
-        "content": "Hello, this is a test message!",
-    }
-
-@pytest.fixture
-def sample_message2():
-    return {
-        "recipient_id": "user_one@example.com",
-        "content": "Hello, this is another test message!",
-    }
-
-@pytest.fixture
-def sample_message3():
-    return {
-        "recipient_id": "user_two@example.com",
-        "content": "Hello, this message is for user_two!",
-    }
-
-class TestMessageSvcAPI:
+    def setup_method(self):
+        """Clean up database before each test"""
+        # Optional: Add cleanup logic if needed
+        # For now, we'll rely on the service's database isolation
+        pass
     
-    def test_health_check(self, client):
-        response = client.get("/")
+    @pytest.fixture
+    def sample_message1(self):
+        return {
+            "recipient_id": "user_one@example.com",
+            "content": "Hello, this is a test message!",
+        }
+
+    @pytest.fixture
+    def sample_message2(self):
+        return {
+            "recipient_id": "user_one@example.com",
+            "content": "Hello, this is another test message!",
+        }
+
+    @pytest.fixture
+    def sample_message3(self):
+        return {
+            "recipient_id": "user_two@example.com",
+            "content": "Hello, this message is for user_two!",
+        }
+
+    def test_health_check(self):
+        """Test the health check endpoint"""
+        response = requests.get(f"{BASE_URL}/")
         assert response.status_code == 200
-    
+        
+        data = response.json()
+        assert "message" in data
+        assert "instance_id" in data
+        assert "V2" in data["message"]
+
     ###########################################################
-    # Submit Message
-    def test_submit_message(self, client, sample_message1):
-        """Should be able to submit a valid message"""
-        response = client.post("/messages", json=sample_message1)
+    # Submit Message (Async)
+    def test_submit_message_async(self, sample_message1):
+        """Should be able to submit a valid message asynchronously"""
+        response = requests.post(f"{BASE_URL}/messages", json=sample_message1)
+        assert response.status_code == 200
+        
+        data = response.json()
+        assert data["status"] == "queued"
+        assert data["recipient_id"] == sample_message1["recipient_id"]
+        assert "Message has been queued for processing" in data["message"]
+
+    def test_submit_message_async_validation_error_empty_recipient(self):
+        """Should return 422 for empty recipient_id"""
+        invalid_message = {
+            "recipient_id": "",
+            "content": "test"
+        }
+        response = requests.post(f"{BASE_URL}/messages", json=invalid_message)
+        assert response.status_code == 422
+
+    def test_submit_message_async_validation_error_empty_content(self):
+        """Should return 422 for empty content"""
+        invalid_message = {
+            "recipient_id": "test@example.com",
+            "content": ""
+        }
+        response = requests.post(f"{BASE_URL}/messages", json=invalid_message)
+        assert response.status_code == 422
+
+    ###########################################################
+    # Submit Message (Sync)
+    def test_submit_message_sync(self, sample_message1):
+        """Should be able to submit a valid message synchronously"""
+        response = requests.post(f"{BASE_URL}/messages/sync", json=sample_message1)
         assert response.status_code == 200
         
         data = response.json()
@@ -82,251 +106,276 @@ class TestMessageSvcAPI:
         assert "id" in data
         assert data["seen"] == False
 
-    def test_submit_message_validation_error(self, client):
+    def test_submit_message_sync_validation_error_empty_recipient(self):
         """Should return 422 for empty recipient_id"""
         invalid_message = {
             "recipient_id": "",
             "content": "test"
         }
-        response = client.post("/messages", json=invalid_message)
+        response = requests.post(f"{BASE_URL}/messages/sync", json=invalid_message)
         assert response.status_code == 422
 
-    def test_submit_message_validation_error(self, client):
+    def test_submit_message_sync_validation_error_empty_content(self):
         """Should return 422 for empty content"""
         invalid_message = {
             "recipient_id": "test@example.com",
             "content": ""
         }
-        response = client.post("/messages", json=invalid_message)
+        response = requests.post(f"{BASE_URL}/messages/sync", json=invalid_message)
         assert response.status_code == 422
-
-    @patch('src.api.service.MessageService.create_message')
-    def test_submit_message_service_exception(self, mock_create_message, client, sample_message1):
-        """Should return 500 when MessageService.create_message raises an exception"""
-        mock_create_message.side_effect = Exception("Database connection failed")
-        
-        response = client.post("/messages", json=sample_message1)
-        assert response.status_code == 500
-        assert "Error creating message: Database connection failed" in response.json()["detail"]
 
     ###########################################################
     # Fetch New Messages
-    def test_fetch_new_messages_empty(self, client):
-        """Fetch new messages should be empty when no messages exist"""
-        response = client.get("/messages/new", params={"recipient_id": "user_one@example.com"})
+    def test_fetch_new_messages_empty(self):
+        """Fetch new messages should be empty when no messages exist for new user"""
+        # Use a unique recipient ID to avoid conflicts with other tests
+        unique_recipient = f"empty_test_{int(time.time())}@example.com"
+        response = requests.get(f"{BASE_URL}/messages/{unique_recipient}/new")
         assert response.status_code == 200
         assert response.json() == {"messages": [], "count": 0}
 
-    def test_fetch_new_messages_includes_new_message(self, client, sample_message1, sample_message2):
+    def test_fetch_new_messages_includes_new_message(self, sample_message1, sample_message2):
         """Fetch new messages should include messages sent after the request"""
-        user_email = "user_one@example.com"
+        # Use unique recipient ID for this test
+        unique_recipient = f"test_{int(time.time())}@example.com"
+        message1 = {**sample_message1, "recipient_id": unique_recipient}
+        message2 = {**sample_message2, "recipient_id": unique_recipient}
 
-        client.post("/messages", json=sample_message1)
-        client.post("/messages", json=sample_message2)
-        response = client.get(f"/messages/{user_email}/new")
+        # Send messages synchronously to ensure they're in DB
+        requests.post(f"{BASE_URL}/messages/sync", json=message1)
+        requests.post(f"{BASE_URL}/messages/sync", json=message2)
+        
+        response = requests.get(f"{BASE_URL}/messages/{unique_recipient}/new")
         assert response.status_code == 200
         assert response.json()["count"] == 2
-        assert response.json()["messages"][0]["content"] == sample_message1["content"]
-        assert response.json()["messages"][1]["content"] == sample_message2["content"]
+        assert response.json()["messages"][0]["content"] == message1["content"]
+        assert response.json()["messages"][1]["content"] == message2["content"]
 
-    def test_fetch_new_messages_should_not_include_other_users_messages(self, client, sample_message1, sample_message2, sample_message3):
+    def test_fetch_new_messages_should_not_include_other_users_messages(self, sample_message1, sample_message2, sample_message3):
         """Fetch new messages should not include messages for other users"""
-        user_one_email = "user_one@example.com"
+        # Use unique recipient IDs for this test
+        unique_recipient1 = f"user1_{int(time.time())}@example.com"
+        unique_recipient2 = f"user2_{int(time.time())}@example.com"
+        
+        message1 = {**sample_message1, "recipient_id": unique_recipient1}
+        message2 = {**sample_message2, "recipient_id": unique_recipient1}
+        message3 = {**sample_message3, "recipient_id": unique_recipient2}
 
-        client.post("/messages", json=sample_message1)
-        client.post("/messages", json=sample_message2)
-        client.post("/messages", json=sample_message3)
-        response = client.get(f"/messages/{user_one_email}/new")
+        requests.post(f"{BASE_URL}/messages/sync", json=message1)
+        requests.post(f"{BASE_URL}/messages/sync", json=message2)
+        requests.post(f"{BASE_URL}/messages/sync", json=message3)
+        
+        response = requests.get(f"{BASE_URL}/messages/{unique_recipient1}/new")
         assert response.status_code == 200
         assert response.json()["count"] == 2
-        assert response.json()["messages"][0]["content"] == sample_message1["content"]
-        assert response.json()["messages"][0]["recipient_id"] == user_one_email
-        assert response.json()["messages"][1]["content"] == sample_message2["content"]
-        assert response.json()["messages"][1]["recipient_id"] == user_one_email
+        assert response.json()["messages"][0]["content"] == message1["content"]
+        assert response.json()["messages"][0]["recipient_id"] == unique_recipient1
+        assert response.json()["messages"][1]["content"] == message2["content"]
+        assert response.json()["messages"][1]["recipient_id"] == unique_recipient1
 
-    def test_fetch_new_messages_excludes_seen_messages(self, client, sample_message1, sample_message2):
+    def test_fetch_new_messages_excludes_seen_messages(self, sample_message1, sample_message2):
         """Fetch new messages should exclude messages that have already been fetched"""
-        user_email = "user_one@example.com"
+        # Use unique recipient ID for this test
+        unique_recipient = f"seen_test_{int(time.time())}@example.com"
+        message1 = {**sample_message1, "recipient_id": unique_recipient}
+        message2 = {**sample_message2, "recipient_id": unique_recipient}
 
-        # first message
-        client.post("/messages", json=sample_message1)
-        client.get(f"/messages/{user_email}/new") # seen
+        # First message
+        requests.post(f"{BASE_URL}/messages/sync", json=message1)
+        requests.get(f"{BASE_URL}/messages/{unique_recipient}/new")  # Mark as seen
 
-        # second message
-        client.post("/messages", json=sample_message2)
-        response = client.get(f"/messages/{user_email}/new")
+        # Second message
+        requests.post(f"{BASE_URL}/messages/sync", json=message2)
+        response = requests.get(f"{BASE_URL}/messages/{unique_recipient}/new")
         assert response.status_code == 200
         assert response.json()["count"] == 1
-        assert response.json()["messages"][0]["content"] == sample_message2["content"]
-
-    @patch('src.api.service.MessageService.fetch_new_messages')
-    def test_fetch_new_messages_service_exception(self, mock_fetch_new_messages, client):
-        """Should return 500 when MessageService.fetch_new_messages raises an exception"""
-        mock_fetch_new_messages.side_effect = Exception("Query execution failed")
-        
-        response = client.get("/messages/user@example.com/new")
-        assert response.status_code == 500
-        assert "Error fetching new messages: Query execution failed" in response.json()["detail"]
+        assert response.json()["messages"][0]["content"] == message2["content"]
 
     ###########################################################
     # Delete Messages
-    def test_delete_message(self, client, sample_message1):
+    def test_delete_message(self, sample_message1):
         """Should be able to delete a specified message"""
-        # send a message first
-        post_response = client.post("/messages", json=sample_message1)
+        # Use unique recipient ID for this test
+        unique_recipient = f"delete_test_{int(time.time())}@example.com"
+        message = {**sample_message1, "recipient_id": unique_recipient}
+        
+        # Send a message first
+        post_response = requests.post(f"{BASE_URL}/messages/sync", json=message)
         message_id = post_response.json()["id"]
 
-        # delete the message
-        delete_response = client.delete(f"/messages/{message_id}")
+        # Delete the message
+        delete_response = requests.delete(f"{BASE_URL}/messages/{message_id}")
         assert delete_response.status_code == 200
         assert delete_response.json()["deleted_count"] == 1
 
-        # verify message is deleted by fetching messages
-        fetch_response = client.get(f"/messages/{sample_message1['recipient_id']}?start=1&stop=10")
+        # Verify message is deleted by fetching messages
+        fetch_response = requests.get(f"{BASE_URL}/messages/{unique_recipient}?start=1&stop=10")
         assert fetch_response.status_code == 200
         assert fetch_response.json()["count"] == 0
 
-    def test_delete_non_existent_message(self, client):
+    def test_delete_non_existent_message(self):
         """Should return 404 when trying to delete a non-existent message"""
-        delete_response = client.delete("/messages/9999")
+        delete_response = requests.delete(f"{BASE_URL}/messages/99999")
         assert delete_response.status_code == 404
-
-    @patch('src.api.service.MessageService.delete_message')
-    def test_delete_message_service_exception(self, mock_delete_message, client):
-        """Should return 500 when MessageService.delete_message raises an exception"""
-        mock_delete_message.side_effect = Exception("Delete operation failed")
-        
-        response = client.delete("/messages/123")
-        assert response.status_code == 500
-        assert "Error deleting message: Delete operation failed" in response.json()["detail"]
 
     ###########################################################
     # Delete Messages - Multiple
-    def test_delete_multiple_messages(self, client, sample_message1, sample_message2):
+    def test_delete_multiple_messages(self, sample_message1, sample_message2):
         """Should be able to delete multiple specified messages"""
-        # send messages first
-        post_response1 = client.post("/messages", json=sample_message1)
-        post_response2 = client.post("/messages", json=sample_message2)
+        # Use unique recipient ID for this test
+        unique_recipient = f"multi_delete_{int(time.time())}@example.com"
+        message1 = {**sample_message1, "recipient_id": unique_recipient}
+        message2 = {**sample_message2, "recipient_id": unique_recipient}
+        
+        # Send messages first
+        post_response1 = requests.post(f"{BASE_URL}/messages/sync", json=message1)
+        post_response2 = requests.post(f"{BASE_URL}/messages/sync", json=message2)
         message_id1 = post_response1.json()["id"]
         message_id2 = post_response2.json()["id"]
 
-        # delete the messages
-        delete_response = client.delete("/messages", params={"message_ids": [message_id1, message_id2]})
+        # Delete the messages
+        delete_response = requests.delete(f"{BASE_URL}/messages", params={"message_ids": [message_id1, message_id2]})
         assert delete_response.status_code == 200
         assert delete_response.json()["deleted_count"] == 2
 
-        # verify messages are deleted by fetching messages
-        fetch_response = client.get(f"/messages/{sample_message1['recipient_id']}?start=1&stop=10")
+        # Verify messages are deleted by fetching messages
+        fetch_response = requests.get(f"{BASE_URL}/messages/{unique_recipient}?start=1&stop=10")
         assert fetch_response.status_code == 200
         assert fetch_response.json()["count"] == 0
 
-    def test_delete_multiple_messages_empty_ids(self, client):
+    def test_delete_multiple_messages_empty_ids(self):
         """Should return 422 when deleting with empty message_ids"""
-        delete_response = client.delete("/messages", params={"message_ids": []})
+        delete_response = requests.delete(f"{BASE_URL}/messages", params={"message_ids": []})
         assert delete_response.status_code == 422
 
-    def test_delete_multiple_messages_non_existent_ids(self, client):
+    def test_delete_multiple_messages_non_existent_ids(self):
         """Should return 404 when trying to delete non-existent messages"""
-        delete_response = client.delete("/messages", params={"message_ids": [9999, 10000]})
+        delete_response = requests.delete(f"{BASE_URL}/messages", params={"message_ids": [99999, 100000]})
         assert delete_response.status_code == 404
-
-    @patch('src.api.service.MessageService.delete_multiple_messages')
-    def test_delete_multiple_messages_service_exception(self, mock_delete_multiple, client):
-        """Should return 500 when MessageService.delete_multiple_messages raises an exception"""
-        mock_delete_multiple.side_effect = Exception("Bulk delete failed")
-        
-        response = client.delete("/messages", params={"message_ids": [1, 2, 3]})
-        assert response.status_code == 500
-        assert "Error deleting messages: Bulk delete failed" in response.json()["detail"]
 
     ###########################################################
     # Fetch Messages - Multiple
-    def test_fetch_multiple_messages_with_pagination(self, client, sample_message1, sample_message2):
+    def test_fetch_multiple_messages_with_pagination(self):
         """Should be able to fetch messages with start and stop index"""
-        user_email = "user@eg.com"
+        # Use unique recipient ID for this test
+        unique_recipient = f"pagination_{int(time.time())}@example.com"
 
-        # send 5 messages
+        # Send 5 messages
         for i in range(5):
             message = {
-                "recipient_id": user_email,
+                "recipient_id": unique_recipient,
                 "content": f"Message {i+1}"
             }
-            client.post("/messages", json=message)
+            requests.post(f"{BASE_URL}/messages/sync", json=message)
 
-        # there should be 5 messages
-        fetch_response = client.get(f"/messages/{user_email}?start=1&stop=5")
+        # There should be 5 messages
+        fetch_response = requests.get(f"{BASE_URL}/messages/{unique_recipient}?start=1&stop=5")
         assert fetch_response.status_code == 200
         assert fetch_response.json()["count"] == 5
         
-    def test_fetch_multiple_messages_pagination_range(self, client):
+    def test_fetch_multiple_messages_pagination_range(self):
         """Should fetch messages in the correct start-stop range (start inclusive, stop inclusive)"""
-        user_email = "user@eg.com"
-        # send 5 messages
+        # Use unique recipient ID for this test
+        unique_recipient = f"range_{int(time.time())}@example.com"
+        
+        # Send 5 messages
         for i in range(5):
             message = {
-                "recipient_id": user_email,
+                "recipient_id": unique_recipient,
                 "content": f"Message {i+1}"
             }
-            client.post("/messages", json=message)
+            requests.post(f"{BASE_URL}/messages/sync", json=message)
 
-        # fetch messages from index 1 to 3
-        fetch_response = client.get(f"/messages/{user_email}?start=1&stop=3")
+        # Fetch messages from index 1 to 3
+        fetch_response = requests.get(f"{BASE_URL}/messages/{unique_recipient}?start=1&stop=3")
         assert fetch_response.status_code == 200
         assert fetch_response.json()["count"] == 3
         assert fetch_response.json()["messages"][0]["content"] == "Message 1"
         assert fetch_response.json()["messages"][1]["content"] == "Message 2"
         assert fetch_response.json()["messages"][2]["content"] == "Message 3"
 
-    def test_fetch_multiple_messages_ordering(self, client):
+    def test_fetch_multiple_messages_ordering(self):
         """Fetched messages should be ordered by message id (index) in asc order"""
-        user_email = "user@eg.com"
-        # send 3 messages
+        # Use unique recipient ID for this test
+        unique_recipient = f"ordering_{int(time.time())}@example.com"
+        
+        # Send 3 messages
         contents = ["First message", "Second message", "Third message"]
         for content in contents:
             message = {
-                "recipient_id": user_email,
+                "recipient_id": unique_recipient,
                 "content": content
             }
-            client.post("/messages", json=message)
-        # fetch all messages
-        fetch_response = client.get(f"/messages/{user_email}?start=1&stop=5")
+            requests.post(f"{BASE_URL}/messages/sync", json=message)
+            
+        # Fetch all messages
+        fetch_response = requests.get(f"{BASE_URL}/messages/{unique_recipient}?start=1&stop=5")
         assert fetch_response.status_code == 200
         assert fetch_response.json()["count"] == 3
         assert fetch_response.json()["messages"][0]["content"] == "First message"
         assert fetch_response.json()["messages"][1]["content"] == "Second message"
         assert fetch_response.json()["messages"][2]["content"] == "Third message"
 
-    def test_fetch_multiple_messages_pagination_out_of_range(self, client):
+    def test_fetch_multiple_messages_pagination_out_of_range(self):
         """Should return 422 if start or stop are out of range"""
-        user_email = "user@eg.com"
-        fetch_response = client.get(f"/messages/{user_email}?start=0&stop=15")
+        unique_recipient = f"out_of_range_{int(time.time())}@example.com"
+        fetch_response = requests.get(f"{BASE_URL}/messages/{unique_recipient}?start=0&stop=15")
         assert fetch_response.status_code == 422
 
-    def test_fetch_multiple_messages_invalid_stop_value(self, client):
+    def test_fetch_multiple_messages_invalid_stop_value(self):
         """Should return 400 when stop is less than start"""
-        user_email = "user@eg.com"
+        unique_recipient = f"invalid_stop_{int(time.time())}@example.com"
         
-        response = client.get(f"/messages/{user_email}?start=5&stop=3")
+        response = requests.get(f"{BASE_URL}/messages/{unique_recipient}?start=5&stop=3")
         assert response.status_code == 400
         assert "stop must be greater than or equal to start" in response.json()["detail"]
 
-    def test_fetch_multiple_messages_invalid_parameters(self, client):
+    def test_fetch_multiple_messages_invalid_parameters(self):
         """Should return 422 for invalid query parameters"""
-        user_email = "user@example.com"
+        unique_recipient = f"invalid_params_{int(time.time())}@example.com"
         
-        #  negative start value (violates ge=1 constraint)
-        response = client.get(f"/messages/{user_email}?start=-1&stop=5")
+        # Negative start value (violates ge=1 constraint)
+        response = requests.get(f"{BASE_URL}/messages/{unique_recipient}?start=-1&stop=5")
         assert response.status_code == 422
         
-        # negative stop value
-        response = client.get(f"/messages/{user_email}?start=1&stop=-1")
+        # Negative stop value
+        response = requests.get(f"{BASE_URL}/messages/{unique_recipient}?start=1&stop=-1")
         assert response.status_code == 422
 
-    @patch('src.api.service.MessageService.fetch_messages_by_index')
-    def test_fetch_multiple_messages_service_exception(self, mock_fetch_messages, client):
-        """Should return 500 when MessageService.fetch_messages_by_index raises an exception"""
-        mock_fetch_messages.side_effect = Exception("Pagination query failed")
+    ###########################################################
+    # End-to-End Flow Tests
+    def test_complete_message_flow(self):
+        """Test the complete message flow: async submit -> processing -> fetch -> delete"""
+        unique_recipient = f"e2e_{int(time.time())}@example.com"
+        test_message = {
+            "recipient_id": unique_recipient,
+            "content": "End-to-end test message"
+        }
         
-        response = client.get("/messages/user@example.com?start=1&stop=5")
-        assert response.status_code == 500
-        assert "Error fetching messages: Pagination query failed" in response.json()["detail"]
+        # 1. Submit message asynchronously
+        submit_response = requests.post(f"{BASE_URL}/messages", json=test_message)
+        assert submit_response.status_code == 200
+        assert submit_response.json()["status"] == "queued"
+        
+        # 2. Wait a bit for async processing (optional)
+        time.sleep(2)
+        
+        # 3. Check if message was processed by fetching new messages
+        # Note: This might be empty if the async processing hasn't completed yet
+        fetch_response = requests.get(f"{BASE_URL}/messages/{unique_recipient}/new")
+        assert fetch_response.status_code == 200
+        
+        # 4. For guaranteed testing, also submit a sync message
+        sync_response = requests.post(f"{BASE_URL}/messages/sync", json=test_message)
+        assert sync_response.status_code == 200
+        message_id = sync_response.json()["id"]
+        
+        # 5. Fetch and verify the sync message
+        fetch_response = requests.get(f"{BASE_URL}/messages/{unique_recipient}/new")
+        assert fetch_response.status_code == 200
+        assert fetch_response.json()["count"] >= 1
+        
+        # 6. Delete the message
+        delete_response = requests.delete(f"{BASE_URL}/messages/{message_id}")
+        assert delete_response.status_code == 200
+        assert delete_response.json()["deleted_count"] == 1

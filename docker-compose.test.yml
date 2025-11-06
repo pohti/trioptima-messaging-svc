@@ -1,0 +1,56 @@
+services:
+  # Test Database
+  test-database:
+    image: postgres:15-alpine
+    container_name: messaging-test-db
+    environment:
+      POSTGRES_DB: messaging_test
+      POSTGRES_USER: test_user
+      POSTGRES_PASSWORD: test_password
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U test_user -d messaging_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Test RabbitMQ
+  test-rabbitmq:
+    image: rabbitmq:3-management
+    container_name: messaging-test-rabbitmq
+    ports:
+      - "5673:5672"
+      - "15673:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: test_user
+      RABBITMQ_DEFAULT_PASS: test_password
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 10s
+      timeout: 10s
+      retries: 5
+
+  # Test Messaging Service
+  test-messaging-svc:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: messaging-test-svc
+    environment:
+      - PYTHONPATH=/app
+      - DATABASE_URL=postgresql://test_user:test_password@test-database:5432/messaging_test
+      - RABBITMQ_URL=amqp://test_user:test_password@test-rabbitmq:5672/
+    ports:
+      - "8001:8000"  # Different port for testing
+    volumes:
+      - ./src:/app/src
+    depends_on:
+      test-database:
+        condition: service_healthy
+      test-rabbitmq:
+        condition: service_started
+    restart: unless-stopped
+
+volumes:
+  test_postgres_data:

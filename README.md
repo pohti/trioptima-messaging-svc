@@ -8,6 +8,7 @@ A REST API for sending and retrieving messages built with FastAPI and SQLAlchemy
 
 - **NGINX**: As reverse proxy round-robin load balancer
 - **FastAPI Application**: REST API framework
+- **Write Service**: Scalable write service that listens to message queue
 - **SQLAlchemy Models**: Database models
 - **RabbitMQ**: To decouple how messages are processed
 - **PostgreSQL**: Database for persisting messages

@@ -32,4 +32,4 @@ RUN adduser --disabled-password --gecos '' appuser && \
 USER appuser
 
 # Command to run the consumer
-CMD ["python", "-m", "src.consumer_service"]
+CMD ["python", "-m", "src.consumer.main"]

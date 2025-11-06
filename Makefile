@@ -1,7 +1,7 @@
 .PHONY: up install clean
 
 up:
-	docker-compose up --build --scale messaging-svc=3
+	docker-compose up --build
 
 down:
 	docker-compose down

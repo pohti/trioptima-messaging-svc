@@ -7,3 +7,5 @@ test.db
 .coverage
 htmlcov/
 htmlcov/*
+
+logs/

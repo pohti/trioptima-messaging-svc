@@ -2,7 +2,7 @@ import logging
 from typing import Dict, Any
 from sqlalchemy.orm import Session
 from src.shared.database import get_db_session
-from src.shared.models import MessageDB, MessageCreate
+from src.shared.models import MessageDB, MessageCreateReq
 from src.shared.rabbit_mq import rabbitmq_manager
 
 logger = logging.getLogger(__name__)

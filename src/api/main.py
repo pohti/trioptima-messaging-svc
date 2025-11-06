@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from src.shared.database import get_db, init_database
 from typing import List
 from src.shared.models import (
-    MessageCreate, 
+    MessageCreateReq, 
     MessageResponse, 
     MessagesFetchResponse
 )
@@ -45,7 +45,7 @@ def health_check(request: Request):
 # Submit a message
 @app.post("/messages", response_model=MessageResponse, summary="Submit a message")
 async def submit_message(
-    message: MessageCreate,     
+    message: MessageCreateReq,     
     db: Session = Depends(get_db)
 ):
     try:

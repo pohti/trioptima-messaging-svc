@@ -17,7 +17,7 @@ class MessageDB(Base):
     seen = Column(Boolean, default=False, nullable=False)
 
 # API Related Models
-class MessageCreate(BaseModel):
+class MessageCreateReq(BaseModel):
     recipient_id: str = Field(..., description="Email of the message recipient")
     content: str = Field(..., min_length=1, description="Message content")
 

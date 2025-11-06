@@ -4,6 +4,8 @@ A REST API for sending and retrieving messages built with FastAPI and SQLAlchemy
 
 ## What's in this repo?
 
+![Architecture Diagram](img/architecture-diagram.png)
+
 - **NGINX**: As reverse proxy round-robin load balancer
 - **FastAPI Application**: REST API framework
 - **SQLAlchemy Models**: Database models

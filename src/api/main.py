@@ -80,17 +80,6 @@ async def submit_message_async(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error queuing message: {str(e)}")
 
-# Submit a message (synchronous - kept for backward compatibility)
-@app.post("/messages/sync", response_model=MessageResponse, summary="Submit a message (sync)")
-async def submit_message_sync(
-    message: MessageCreateReq,     
-    db: Session = Depends(get_db)
-):
-    try:
-        return MessageService.create_message(message, db)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error creating message: {str(e)}")
-
 # Fetch new messages by user email
 @app.get("/messages/{recipient_id}/new", response_model=MessagesFetchResponse, summary="Fetch new messages")
 async def fetch_new_messages(

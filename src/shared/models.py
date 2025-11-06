@@ -18,8 +18,18 @@ class MessageDB(Base):
 
 # API Related Models
 class MessageCreateReq(BaseModel):
-    recipient_id: str = Field(..., description="Email of the message recipient")
-    content: str = Field(..., min_length=1, description="Message content")
+    recipient_id: str = Field(
+        ..., 
+        description="Email of the message recipient",
+        min_length=1,
+        max_length=255
+    )
+    content: str = Field(
+        ..., 
+        min_length=1, 
+        max_length=5000,
+        description="Message content",
+    )
 
 class MessageResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)

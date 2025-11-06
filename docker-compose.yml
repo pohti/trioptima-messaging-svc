@@ -18,19 +18,19 @@ services:
       retries: 5
 
   # Message Queue
-  # rabbitmq:
-  #   image: rabbitmq:3-management
-  #   ports:
-  #     - "5672:5672"    # server
-  #     - "15672:15672"  # web UI
-  #   environment:
-  #     RABBITMQ_DEFAULT_USER: user
-  #     RABBITMQ_DEFAULT_PASS: password
-    # healthcheck:
-    #   test: rabbitmq-diagnostics -q ping
-    #   interval: 10s
-    #   timeout: 10s
-    #   retries: 5
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"    # server
+      - "15672:15672"  # web UI
+    environment:
+      RABBITMQ_DEFAULT_USER: user
+      RABBITMQ_DEFAULT_PASS: password
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 10s
+      timeout: 10s
+      retries: 5
 
   messaging-svc:
     build:
@@ -39,14 +39,14 @@ services:
     environment:
       - PYTHONPATH=/app
       - DATABASE_URL=postgresql://db_user:db_password@database:5432/messaging
-      # - RABBITMQ_URL=amqp://user:password@rabbitmq:5672/
+      - RABBITMQ_URL=amqp://user:password@rabbitmq:5672/
     volumes:
       - ./src:/app/src
     depends_on:
       database:
         condition: service_healthy
-      # rabbitmq:
-      #   condition: service_started
+      rabbitmq:
+        condition: service_started
     restart: unless-stopped
 
   # nginx as round-robin load balancer

@@ -1,4 +1,5 @@
 import os
+from contextlib import contextmanager
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy import create_engine
 from .models import Base
@@ -18,6 +19,14 @@ def create_tables():
     Base.metadata.create_all(bind=engine)
 
 def get_db() -> Generator[Session, None, None]:
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+@contextmanager
+def get_db_session():
     db = SessionLocal()
     try:
         yield db

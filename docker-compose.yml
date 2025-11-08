@@ -31,7 +31,7 @@ services:
       timeout: 10s
       retries: 5
 
-  # API Service (for handling HTTP requests)
+  # API Service (for creating messages only)
   messaging-api:
     build:
       context: .
@@ -51,7 +51,24 @@ services:
     deploy:
       replicas: 2
 
-  # Write Service (for creating and deleting messages)
+  # Reader Service (for reading and deleting messages)
+  messaging-reader:
+    build:
+      context: .
+      dockerfile: Dockerfile.reader
+    environment:
+      - PYTHONPATH=/app
+      - DATABASE_URL=postgresql://db_user:db_password@database:5432/messaging
+    volumes:
+      - ./src:/app/src
+    depends_on:
+      database:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      replicas: 2
+
+  # Writer Service (for creating messages from queue)
   messaging-writer:
     build:
       context: .
@@ -75,11 +92,13 @@ services:
   nginx:
     image: nginx:alpine
     ports:
-      - "8000:80"  # host:nginx
+      - "8000:80"  # host:nginx for write API
+      - "8001:81"  # host:nginx for read API  
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
       - messaging-api
+      - messaging-reader
       - messaging-writer
     restart: unless-stopped
 

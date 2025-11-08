@@ -31,11 +31,11 @@ services:
       timeout: 10s
       retries: 5
 
-  # API Service (for creating messages only)
-  messaging-gateway:
+  # API Router Service (Entry point)
+  messaging-router:
     build:
       context: .
-      dockerfile: Dockerfile.gateway
+      dockerfile: Dockerfile.router
     environment:
       - PYTHONPATH=/app
       - READ_SERVICE_URL=http://messaging-read:8002
@@ -67,7 +67,7 @@ services:
     deploy:
       replicas: 2
 
-  # Writer Service (for creating messages from queue)
+  # Writer Service (for consuming message queue and writing to DB)
   messaging-write:
     build:
       context: .
@@ -112,7 +112,7 @@ services:
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
-      - messaging-gateway
+      - messaging-router
       - messaging-read
       - messaging-write
       - messaging-delete

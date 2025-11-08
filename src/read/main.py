@@ -6,7 +6,6 @@ from sqlalchemy.orm import Session
 from src.shared.database import get_db, init_database
 from typing import List
 from src.shared.models import (
-    MessageResponse, 
     MessagesFetchResponse
 )
 from .service import ReaderService

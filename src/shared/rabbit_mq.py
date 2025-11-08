@@ -23,7 +23,7 @@ class RabbitMQManager:
 
             self.connection = await connect_robust(self.url)
             self.channel = await self.connection.channel()
-            await self.channel.set_qos(prefetch_count=1)
+            await self.channel.set_qos(prefetch_count=1) # prefetch_count = max unacknowledged messages
             logger.info("Connected to RabbitMQ")
         except Exception as e:
             logger.error(f"Failed to connect to RabbitMQ: {e}")
@@ -57,6 +57,7 @@ class RabbitMQManager:
         message_body = json.dumps(message_data).encode()
         message = Message(
             message_body,
+            # PERSISTENT = survives broker restart, NOT_PERSISTENT = lost on restart
             delivery_mode=DeliveryMode.PERSISTENT if durable else DeliveryMode.NOT_PERSISTENT
         )
         

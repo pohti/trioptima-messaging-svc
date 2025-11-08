@@ -14,27 +14,34 @@ logger = logging.getLogger(__name__)
 class ReaderService:
     @staticmethod
     def fetch_new_messages(recipient_id: str, db: Session) -> MessagesFetchResponse:
-        # filter new messages
-        new_messages = db.query(MessageDB).filter(
-            and_(
-                MessageDB.recipient_id == recipient_id,
-                MessageDB.seen == False
-            )
-        ).order_by(MessageDB.created_at.asc()).all()
+        try:
+            # Use FOR UPDATE to lock rows atomically
+            # This prevents other transactions from seeing these rows until we commit
+            new_messages = db.query(MessageDB).filter(
+                and_(
+                    MessageDB.recipient_id == recipient_id,
+                    MessageDB.seen == False
+                )
+            ).order_by(MessageDB.created_at.asc()).with_for_update().all()
 
-        # mark messages as seen
-        if new_messages:
-            message_ids = [msg.id for msg in new_messages]
-            db.query(MessageDB).filter(MessageDB.id.in_(message_ids)).update(
-                {MessageDB.seen: True}, synchronize_session=False
-            )
-            db.commit()
+            # mark messages as seen within the same transaction
+            if new_messages:
+                for message in new_messages:
+                    message.seen = True
+                db.commit()  # Commit the transaction atomically
+            else:
+                db.commit()  # Commit empty transaction
 
-        # no need to show 'seen' field in response
-        return MessagesFetchResponse(
-            messages=[MessageResponse.model_validate(msg) for msg in new_messages],
-            count=len(new_messages)
-        )
+            # no need to show 'seen' field in response
+            return MessagesFetchResponse(
+                messages=[MessageResponse.model_validate(msg) for msg in new_messages],
+                count=len(new_messages)
+            )
+            
+        except Exception as e:
+            db.rollback()  # Rollback on any error
+            logger.error(f"Error fetching new messages atomically: {e}")
+            raise
 
     @staticmethod
     def fetch_messages_by_index(
@@ -43,27 +50,33 @@ class ReaderService:
         stop_index: int,
         db: Session
     ) -> MessagesFetchResponse:
-        # filter for messages by start_index <= id <= stop_index
-        messages = db.query(MessageDB).filter(
-            and_(
-                MessageDB.recipient_id == recipient_id,
-                MessageDB.id >= start_index,
-                MessageDB.id <= stop_index
-            )
-        ).order_by(MessageDB.id.asc()).all() # improvement: allow ordering by desc as well
-        
-        # update all fetched messages as seen
-        if messages:
-            message_ids = [msg.id for msg in messages]
-            db.query(MessageDB).filter(MessageDB.id.in_(message_ids)).update(
-                {MessageDB.seen: True}, synchronize_session=False
-            )
-            db.commit()
+        try:
+            # Use FOR UPDATE to lock rows atomically
+            messages = db.query(MessageDB).filter(
+                and_(
+                    MessageDB.recipient_id == recipient_id,
+                    MessageDB.id >= start_index,
+                    MessageDB.id <= stop_index
+                )
+            ).order_by(MessageDB.id.asc()).with_for_update().all()
+            
+            # update all fetched messages as seen within the same transaction
+            if messages:
+                for message in messages:
+                    message.seen = True
+                db.commit()  # Commit the transaction atomically
+            else:
+                db.commit()  # Commit empty transaction
 
-        return MessagesFetchResponse(
-            messages=[MessageResponse.model_validate(msg) for msg in messages],
-            count=len(messages),
-        )
+            return MessagesFetchResponse(
+                messages=[MessageResponse.model_validate(msg) for msg in messages],
+                count=len(messages),
+            )
+            
+        except Exception as e:
+            db.rollback()  # Rollback on any error
+            logger.error(f"Error fetching messages by index atomically: {e}")
+            raise
 
     @staticmethod
     def delete_message(message_id: int, db: Session) -> DeleteResponse:

@@ -1,8 +1,9 @@
 import logging
 from typing import Dict, Any
 from src.shared.database import get_db_session
-from src.shared.models import MessageDB, MessageCreateReq
+from src.shared.models import MessageDB, MessageResponse
 from src.shared.rabbit_mq import rabbitmq_manager
+from src.shared.redis import redis_cache
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +32,13 @@ class MessageProcessor:
                 db.commit()
                 db.refresh(new_message)
                 
+                # Convert to response model for caching
+                message_response = MessageResponse.model_validate(new_message)
+                
                 logger.info(f"Successfully processed message {new_message.id} for recipient {recipient_id}")
+                
+                # Cache the new message
+                await redis_cache.cache_new_message(message_response)
                 
         except Exception as e:
             logger.error(f"Failed to process message: {e}")
@@ -41,6 +48,9 @@ class MessageProcessor:
     async def start_consumer():
         """Start consuming messages from the queue"""
         try:
+            # Connect to Redis cache
+            await redis_cache.connect()
+            
             await rabbitmq_manager.connect()
             await rabbitmq_manager.declare_queue(MessageProcessor.QUEUE_NAME)
             await rabbitmq_manager.consume_messages(

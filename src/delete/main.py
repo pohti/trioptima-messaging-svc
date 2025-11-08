@@ -4,6 +4,7 @@ import logging
 from fastapi import FastAPI, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 from src.shared.database import get_db, init_database
+from src.shared.redis import redis_cache
 from typing import List
 from .service import DeleteService
 from contextlib import asynccontextmanager
@@ -16,13 +17,29 @@ INSTANCE_ID = os.getenv("HOSTNAME", socket.gethostname())
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_database()
+    
+    # Connect to Redis cache
+    try:
+        await redis_cache.connect()
+        logger.info("Redis cache connected")
+    except Exception as e:
+        logger.error(f"Failed to connect to Redis cache: {e}")
+    
     print(f"Starting Delete service instance: {INSTANCE_ID}")
     yield
+    
+    # Cleanup
+    try:
+        await redis_cache.close()
+        logger.info("Redis cache connection closed")
+    except Exception as e:
+        logger.error(f"Error closing Redis cache: {e}")
+    
     print(f"Shutting down Delete service instance: {INSTANCE_ID}")
 
 app = FastAPI(
     title="Messaging Delete Service",
-    description="Microservice for deleting messages",
+    description="Microservice for deleting messages with cache invalidation",
     version="1.0.0",
     lifespan=lifespan
 )
@@ -30,7 +47,7 @@ app = FastAPI(
 @app.get("/", summary="Health check endpoint")
 def health_check(request: Request):
     return {
-        "message": "Delete Service",
+        "message": "Delete Service with Redis Cache",
         "instance_id": INSTANCE_ID,
         "host": request.headers.get("host"),
     }
@@ -38,7 +55,7 @@ def health_check(request: Request):
 @app.delete("/messages/{message_id}", summary="Delete a message")
 async def delete_message(message_id: int, db: Session = Depends(get_db)):
     try:
-        result = DeleteService.delete_message(message_id, db)
+        result = await DeleteService.delete_message(message_id, db)
         if result.deleted_count == 0:
             raise HTTPException(status_code=404, detail=result.message)
         return result
@@ -50,7 +67,7 @@ async def delete_message(message_id: int, db: Session = Depends(get_db)):
 @app.delete("/messages", summary="Delete multiple messages")
 async def delete_multiple_messages(message_ids: List[int] = Query(...), db: Session = Depends(get_db)):
     try:
-        result = DeleteService.delete_multiple_messages(message_ids, db)
+        result = await DeleteService.delete_multiple_messages(message_ids, db)
         if result.deleted_count == 0:
             raise HTTPException(status_code=404, detail=result.message)
         return result

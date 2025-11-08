@@ -16,12 +16,25 @@ services:
       timeout: 5s
       retries: 5
 
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
   # Message Queue
   rabbitmq:
-    image: rabbitmq:3-management
+    image: rabbitmq:3
     ports:
-      - "5672:5672"    # server
-      - "15672:15672"  # web UI
+      - "5672:5672"
     environment:
       RABBITMQ_DEFAULT_USER: user
       RABBITMQ_DEFAULT_PASS: password
@@ -31,7 +44,7 @@ services:
       timeout: 10s
       retries: 5
 
-  # API Router Service (Entry point)
+  # API Router Service
   messaging-router:
     build:
       context: .
@@ -41,6 +54,7 @@ services:
       - READ_SERVICE_URL=http://messaging-read:8002
       - DELETE_SERVICE_URL=http://messaging-delete:8003
       - RABBITMQ_URL=amqp://user:password@rabbitmq:5672/
+      - REDIS_URL=redis://redis:6379
     volumes:
       - ./src:/app/src
     depends_on:
@@ -48,9 +62,10 @@ services:
       - messaging-read
       - messaging-delete
       - rabbitmq
+      - redis
     restart: unless-stopped
 
-  # Reader Service (for reading and deleting messages)
+  # Reader Service
   messaging-read:
     build:
       context: .
@@ -58,16 +73,19 @@ services:
     environment:
       - PYTHONPATH=/app
       - DATABASE_URL=postgresql://db_user:db_password@database:5432/messaging
+      - REDIS_URL=redis://redis:6379
     volumes:
       - ./src:/app/src
     depends_on:
       database:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     restart: unless-stopped
     deploy:
-      replicas: 2
+      replicas: 1
 
-  # Writer Service (for consuming message queue and writing to DB)
+  # Writer Service
   messaging-write:
     build:
       context: .
@@ -76,6 +94,7 @@ services:
       - PYTHONPATH=/app
       - DATABASE_URL=postgresql://db_user:db_password@database:5432/messaging
       - RABBITMQ_URL=amqp://user:password@rabbitmq:5672/
+      - REDIS_URL=redis://redis:6379
     volumes:
       - ./src:/app/src
     depends_on:
@@ -83,9 +102,11 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_started
+      redis:
+        condition: service_healthy
     restart: unless-stopped
     deploy:
-      replicas: 2
+      replicas: 1
 
   # Delete Service
   messaging-delete:
@@ -95,28 +116,29 @@ services:
     environment:
       - PYTHONPATH=/app
       - DATABASE_URL=postgresql://db_user:db_password@database:5432/messaging
+      - REDIS_URL=redis://redis:6379
     volumes:
       - ./src:/app/src
     depends_on:
       database:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     restart: unless-stopped
     deploy:
-      replicas: 2
+      replicas: 1
 
-  # nginx as round-robin load balancer
+  # nginx load balancer
   nginx:
     image: nginx:alpine
     ports:
-      - "8000:80"  # host:nginx
+      - "8000:80"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
       - messaging-router
-      - messaging-read
-      - messaging-write
-      - messaging-delete
     restart: unless-stopped
 
 volumes:
   postgres_data:
+  redis_data:

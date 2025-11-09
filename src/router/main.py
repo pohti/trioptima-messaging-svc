@@ -18,8 +18,8 @@ logger = logging.getLogger(__name__)
 INSTANCE_ID = os.getenv("HOSTNAME", socket.gethostname())
 
 # Service URLs (only read and delete services)
-READ_SERVICE_URL = os.getenv("READ_SERVICE_URL", "http://messaging-read:8002") 
-DELETE_SERVICE_URL = os.getenv("DELETE_SERVICE_URL", "http://messaging-delete:8003")
+READ_SERVICE_URL = os.getenv("READ_SERVICE_URL", "http://read-lb") 
+DELETE_SERVICE_URL = os.getenv("DELETE_SERVICE_URL", "http://delete-lb")
 
 # Queue name for write operations
 MESSAGE_QUEUE = "message_processing_queue"

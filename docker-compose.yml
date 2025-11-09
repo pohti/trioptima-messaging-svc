@@ -44,27 +44,6 @@ services:
       timeout: 10s
       retries: 5
 
-  # API Router Service
-  messaging-router:
-    build:
-      context: .
-      dockerfile: Dockerfile.router
-    environment:
-      - PYTHONPATH=/app
-      - READ_SERVICE_URL=http://messaging-read:8002
-      - DELETE_SERVICE_URL=http://messaging-delete:8003
-      - RABBITMQ_URL=amqp://user:password@rabbitmq:5672/
-      - REDIS_URL=redis://redis:6379
-    volumes:
-      - ./src:/app/src
-    depends_on:
-      - messaging-write
-      - messaging-read
-      - messaging-delete
-      - rabbitmq
-      - redis
-    restart: unless-stopped
-
   # Reader Service
   messaging-read:
     build:
@@ -128,8 +107,49 @@ services:
     deploy:
       replicas: 2
 
+  # Load Balancer for Read Service
+  read-lb:
+    image: nginx:alpine
+    volumes:
+      - ./nginx/read.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - messaging-read
+    restart: unless-stopped
+    # Internal port 80, no external exposure
+
+  # Load Balancer for Delete Service  
+  delete-lb:
+    image: nginx:alpine
+    volumes:
+      - ./nginx/delete.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - messaging-delete
+    restart: unless-stopped
+    # Internal port 80, no external exposure
+
+  # API Router Service
+  messaging-router:
+    build:
+      context: .
+      dockerfile: Dockerfile.router
+    environment:
+      - PYTHONPATH=/app
+      - READ_SERVICE_URL=http://read-lb 
+      - DELETE_SERVICE_URL=http://delete-lb
+      - RABBITMQ_URL=amqp://user:password@rabbitmq:5672/
+      - REDIS_URL=redis://redis:6379
+    volumes:
+      - ./src:/app/src
+    depends_on:
+      - messaging-write
+      - read-lb
+      - delete-lb
+      - rabbitmq
+      - redis
+    restart: unless-stopped
+
   # nginx load balancer
-  nginx:
+  router-lb:
     image: nginx:alpine
     ports:
       - "8000:80"

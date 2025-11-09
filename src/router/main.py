@@ -57,7 +57,7 @@ app = FastAPI(
 @app.get("/", summary="Health check endpoint")
 def health_check(request: Request):
     return {
-        "message": "Messaging Service API Gateway",
+        "message": "Messaging Service",
         "instance_id": INSTANCE_ID,
     }
 

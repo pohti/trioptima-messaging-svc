@@ -2,6 +2,7 @@ import os
 import socket
 import logging
 import httpx
+import json  # Add this import
 from fastapi import FastAPI, HTTPException, Request, Query
 from typing import List
 from src.shared.models import (
@@ -110,7 +111,15 @@ async def fetch_new_messages(recipient_id: str):
         raise HTTPException(status_code=503, detail="Read service unavailable")
     except httpx.HTTPStatusError as e:
         logger.error(f"Read service error: {e.response.status_code} - {e.response.text}")
-        raise HTTPException(status_code=e.response.status_code, detail=e.response.text)
+        
+        # FIX: Parse the JSON response instead of using raw text
+        try:
+            error_detail = e.response.json()
+            detail = error_detail.get("detail", "Read service error")
+        except json.JSONDecodeError:
+            detail = e.response.text
+        
+        raise HTTPException(status_code=e.response.status_code, detail=detail)
 
 @app.get("/messages/{recipient_id}", response_model=MessagesFetchResponse, summary="Fetch multiple messages")
 async def fetch_multiple_messages(
@@ -137,9 +146,17 @@ async def fetch_multiple_messages(
         raise HTTPException(status_code=503, detail="Read service unavailable")
     except httpx.HTTPStatusError as e:
         logger.error(f"Read service error: {e.response.status_code} - {e.response.text}")
-        raise HTTPException(status_code=e.response.status_code, detail=e.response.text)
+        
+        # FIX: Parse the JSON response instead of using raw text
+        try:
+            error_detail = e.response.json()
+            detail = error_detail.get("detail", "Read service error")
+        except json.JSONDecodeError:
+            detail = e.response.text
+        
+        raise HTTPException(status_code=e.response.status_code, detail=detail)
 
-# Delete operations - Route to Delete Service
+# Delete operations - Route to Delete Service (FIXED)
 @app.delete("/messages/{message_id}", summary="Delete a message")
 async def delete_message(message_id: int):
     try:
@@ -155,7 +172,17 @@ async def delete_message(message_id: int):
         raise HTTPException(status_code=503, detail="Delete service unavailable")
     except httpx.HTTPStatusError as e:
         logger.error(f"Delete service error: {e.response.status_code} - {e.response.text}")
-        raise HTTPException(status_code=e.response.status_code, detail=e.response.text)
+        
+        # FIX: Parse the JSON response instead of using raw text
+        try:
+            error_detail = e.response.json()
+            # Extract the actual detail message
+            detail = error_detail.get("detail", "Delete service error")
+        except json.JSONDecodeError:
+            # Fallback if response is not JSON
+            detail = e.response.text
+        
+        raise HTTPException(status_code=e.response.status_code, detail=detail)
 
 @app.delete("/messages", summary="Delete multiple messages")
 async def delete_multiple_messages(message_ids: List[int] = Query(...)):
@@ -173,4 +200,14 @@ async def delete_multiple_messages(message_ids: List[int] = Query(...)):
         raise HTTPException(status_code=503, detail="Delete service unavailable")
     except httpx.HTTPStatusError as e:
         logger.error(f"Delete service error: {e.response.status_code} - {e.response.text}")
-        raise HTTPException(status_code=e.response.status_code, detail=e.response.text)
+        
+        # FIX: Parse the JSON response instead of using raw text
+        try:
+            error_detail = e.response.json()
+            # Extract the actual detail message
+            detail = error_detail.get("detail", "Delete service error")
+        except json.JSONDecodeError:
+            # Fallback if response is not JSON
+            detail = e.response.text
+        
+        raise HTTPException(status_code=e.response.status_code, detail=detail)

@@ -37,8 +37,14 @@ class RedisCache:
         """Get Redis key for a specific message"""
         return f"message:{message_id}"
     
+
     async def cache_new_message(self, message: MessageResponse):
-        """Cache a new message for a recipient"""
+        """
+            Cache a new message for a recipient
+            # uses dual caching with sorted sets for new messages
+            # sorted by message ID to maintain order
+            # also caches individual messages for quick access
+        """
         try:
             if not self.redis:
                 return
@@ -49,11 +55,14 @@ class RedisCache:
                 "id": message.id,
                 "recipient_id": message.recipient_id,
                 "content": message.content,
-                "created_at": message.created_at.isoformat(),
+                "created_at": message.created_at.isoformat(), # datetime to ISO format for json compatibility
                 "seen": message.seen
             }
             
-            # Use message ID as score for ordering
+            # add message to sorted set
+            # recipient_id as key
+            # message_data as member
+            # message.id as score to maintain order
             await self.redis.zadd(key, {json.dumps(message_data): message.id})
             
             # Cache individual message
@@ -73,7 +82,8 @@ class RedisCache:
             
             key = self._get_new_messages_key(recipient_id)
             
-            # Get all messages from sorted set (ordered by message ID)
+            # retrieve all messages from sorted set
+            # order by message ID (ascending)
             cached_messages = await self.redis.zrange(key, 0, -1)
             
             if not cached_messages:

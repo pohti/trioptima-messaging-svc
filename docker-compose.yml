@@ -147,6 +147,8 @@ services:
       - rabbitmq
       - redis
     restart: unless-stopped
+    deploy:
+      replicas: 2
 
   # nginx load balancer
   router-lb:
